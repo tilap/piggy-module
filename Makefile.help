@@ -1,0 +1,18 @@
+   _   _
+  \_/-\_/
+   )   (     piggy-module
+  (     )    ~*~*~*~*~*~*~
+   )   (
+  /     \        Makefile options
+ (   9   )
+(_\_____/_)`
+
+[c]lean   : remove all the generated files
+[b]uild   : generate all the files
+[w]atch   : start the server and watch changing files
+
+## Quick shortcuts
+cb  : clean build
+bw  : build watch
+cbw : clean build watch
+

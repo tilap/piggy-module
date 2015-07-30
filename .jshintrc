@@ -1,0 +1,17 @@
+{
+  "esnext": true,
+  "camelcase": true,
+  "curly": true,
+  "freeze": false,
+  "latedef": "nofunc",
+  "newcap": true,
+  "noarg": true,
+  "undef": true,
+  "unused": "vars",
+  "laxbreak": true,
+  "maxparams": 8,
+  "maxdepth": 6,
+  "boss": true,
+  "eqnull": true,
+  "node": true
+}
