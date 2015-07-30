@@ -1,7 +1,7 @@
 {
   "name": "piggy-module",
   "version": "0.0.1",
-  "description": "Business module base",
+  "description": "Basic business module: manager, vo, validator",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tilap/piggy-module.git"
