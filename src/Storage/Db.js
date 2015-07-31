@@ -3,8 +3,8 @@ import { StorageError } from './../Errors';
 
 export default class Storage extends AbstractStorage{
 
-  constructor(collection, name) {
-    super(collection, name);
+  constructor(collection) {
+    super(collection);
   }
 
   get(criteria = {}) {
