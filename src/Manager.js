@@ -2,31 +2,36 @@ import { ManagerError } from './Errors';
 
 export default class Manager {
 
-  constructor() {
+  constructor(storage) {
+    this.storage = storage;
   }
 
-  static assumeIsOwnVoClass(vo) {
-    if(vo.constructor.name !== this.voClass.name) {
-      throw new ManagerError('Require a ' + this.voClass.name + ' class');
+  assumeIsOwnVoClass(vo) {
+    if(vo.constructor.name !== this.constructor.voClass.name) {
+      throw new ManagerError('Require a ' + this.constructor.voClass.name + ' class');
     }
   }
 
-  static get(criteria) {
+  getNewVo(data={}) {
+    return new this.constructor.voClass(data);
+  }
+
+  get(criteria) {
     return this.storage.get(criteria)
       .then( items => {
         let res = [];
         items.map( item => {
-          res.push(new this.voClass(item) );
+          res.push(this.getNewVo(item));
         });
         return res;
       });
   }
 
-  static saveOne(vo) {
+  saveOne(vo) {
     return vo.id ? this.updateOne(vo) : this.insertOne(vo);
   }
 
-  static insertOne(vo) {
+  insertOne(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve, reject) => {
       this.getAllVoErrors(vo)
@@ -37,7 +42,7 @@ export default class Manager {
 
           this.storage.insert(vo.data)
             .then(newItemData => {
-              resolve(new this.voClass(newItemData));
+              resolve(new this.getNewVo(newItemData));
             })
             .catch(err => {
               reject( new ManagerError(err.message) );
@@ -46,7 +51,7 @@ export default class Manager {
     });
   }
 
-  static updateOne(vo) {
+  updateOne(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve, reject) => {
       this.getAllVoErrors(vo)
@@ -64,7 +69,7 @@ export default class Manager {
     });
   }
 
-  static delete(vosArr) {
+  delete(vosArr) {
     return new Promise( (resolve, reject) => {
       let ids = [];
       vosArr.forEach( vo => {
@@ -84,7 +89,7 @@ export default class Manager {
     });
   }
 
-  static deleteOne(vo) {
+  deleteOne(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve, reject) => {
       let criteria = { _id: vo.id };
@@ -100,15 +105,14 @@ export default class Manager {
     });
   }
 
-  static getByUniqueProperty(property, value) {
-
+  getByUniqueProperty(property, value) {
     return new Promise( (resolve, reject) => {
-      if(!this.validatorClass.isPropertyUnique(property)) {
+      if(!this.constructor.validatorClass.isPropertyUnique(property)) {
         return reject(new Error('The property "' + property + '" is not unique'));
       }
 
       // @todo add cast to value
-      // value = this.voClass.castVoPropertyValue(property, value);
+      // value = this.constructor.voClass.castVoPropertyValue(property, value);
 
       let criteria = {};
       criteria[property] = value;
@@ -132,9 +136,9 @@ export default class Manager {
   }
 
   // Get objects having a unique property in the values array
-  static getByUniquePropertyM(property, values) {
+  getByUniquePropertyM(property, values) {
     return new Promise( (resolve, reject) => {
-      if(!this.validatorClass.isPropertyUnique(property)) {
+      if(!this.constructor.validatorClass.isPropertyUnique(property)) {
         return reject(new Error('The property "' + property + '" is not unique'));
       }
 
@@ -153,7 +157,7 @@ export default class Manager {
     });
   }
 
-  static getAllVoErrors(vo, skipProperties= []) {
+  getAllVoErrors(vo, skipProperties= []) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve, reject) => {
       Promise.all( [this.getVoFormatErrors(vo), this.getVoUniqueErrors(vo), this.getVoBusinessErrors(vo)] )
@@ -177,11 +181,11 @@ export default class Manager {
 
   }
 
-  static getVoFormatErrors(vo) {
+  getVoFormatErrors(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve) => {
       let errors = {};
-      let validator = new this.validatorClass(vo);
+      let validator = new this.constructor.validatorClass(vo);
       validator.validateVo();
       if(validator.hasError()) {
         errors = validator.errors;
@@ -190,16 +194,16 @@ export default class Manager {
     });
   }
 
-  static getVoUniqueErrors(vo) {
+  getVoUniqueErrors(vo) {
     this.assumeIsOwnVoClass(vo);
     let result = {};
     let promises = [];
 
-    this.validatorClass.uniques.forEach( property => {
+    this.constructor.validatorClass.uniques.forEach( property => {
       let value = vo[property];
 
       // Skip if empty and not required
-      if(this.validatorClass.needToCheckProperty(property, value)) {
+      if(this.constructor.validatorClass.needToCheckProperty(property, value)) {
         let p = this.getByUniqueProperty(property, value)
           .then ( foundVo => {
             if(foundVo==null) {
@@ -234,7 +238,7 @@ export default class Manager {
   }
 
   // To extend to run business check on the VO
-  static getVoBusinessErrors(vo) {
+  getVoBusinessErrors(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve) => {
       return resolve({});
@@ -243,7 +247,7 @@ export default class Manager {
 }
 
 
-Manager.init = function(ManagerChild, VoClass, ValidatorClass, StorageInstance) {
+Manager.init = function(ManagerChild, VoClass, ValidatorClass) {
 
   Object.defineProperty(ManagerChild, 'voClass', {
     enumerable: false,
@@ -257,13 +261,6 @@ Manager.init = function(ManagerChild, VoClass, ValidatorClass, StorageInstance) 
     writable: false,
     configurable: false,
     value: ValidatorClass
-  });
-
-  Object.defineProperty(ManagerChild, 'storage', {
-    enumerable: false,
-    writable: false,
-    configurable: false,
-    value: StorageInstance
   });
 
   VoClass.getPropertiesNames().forEach( property => {
