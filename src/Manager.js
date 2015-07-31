@@ -42,7 +42,7 @@ export default class Manager {
 
           this.storage.insert(vo.data)
             .then(newItemData => {
-              resolve(new this.getNewVo(newItemData));
+              resolve(this.getNewVo(newItemData));
             })
             .catch(err => {
               reject( new ManagerError(err.message) );
