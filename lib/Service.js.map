@@ -1,0 +1,1 @@
+{"version":3,"sources":["Service.js"],"names":[],"mappings":";;;;;;;;IAAqB,OAAO,GAEf,SAFQ,OAAO,CAEd,OAAO,EAAE;wBAFF,OAAO;;AAGxB,MAAI,CAAC,QAAQ,GAAG,OAAO,CAAC;CACzB;;qBAJkB,OAAO","file":"Service.js","sourcesContent":["export default class Service {\n\n  constructor(manager) {\n    this._manager = manager;\n  }\n\n}\n"],"sourceRoot":"/source/"}

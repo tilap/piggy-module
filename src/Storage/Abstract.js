@@ -1,9 +1,8 @@
 import { StorageError } from './../Errors';
 
 export default class AbstractStorage {
-  constructor(collection, name) {
+  constructor(collection) {
     this._collection = collection || null;
-    this._name = name || '';
   }
 
   get collection() {
