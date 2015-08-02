@@ -1,4 +1,4 @@
-import { ManagerError } from './Errors';
+import ManagerError from './Errors';
 
 export default class Manager {
 
@@ -16,14 +16,20 @@ export default class Manager {
     return new this.constructor.voClass(data);
   }
 
-  get(criteria) {
-    return this.storage.get(criteria)
+  get(criteria={}, options={}) {
+    return this.storage.get(criteria, options)
+      .catch( err => {
+        throw new ManagerError(err.message);
+      })
       .then( items => {
         let res = [];
         items.map( item => {
           res.push(this.getNewVo(item));
         });
         return res;
+      })
+      .catch( err => {
+        throw new ManagerError(err.message);
       });
   }
 
@@ -44,9 +50,9 @@ export default class Manager {
             .then(newItemData => {
               resolve(this.getNewVo(newItemData));
             })
-            .catch(err => {
-              reject( new ManagerError(err.message) );
-            });
+        })
+        .catch(err => {
+          reject( new ManagerError(err.message) );
         });
     });
   }
@@ -65,6 +71,9 @@ export default class Manager {
               .then(items => {
                 resolve(items[0]);
               });
+        })
+        .catch(err => {
+          reject( new ManagerError(err.message) );
         });
     });
   }
@@ -110,7 +119,6 @@ export default class Manager {
       if(!this.constructor.validatorClass.isPropertyUnique(property)) {
         return reject(new Error('The property "' + property + '" is not unique'));
       }
-
       // @todo add cast to value
       // value = this.constructor.voClass.castVoPropertyValue(property, value);
 
@@ -267,14 +275,20 @@ Manager.init = function(ManagerChild, VoClass, ValidatorClass) {
     if(ValidatorClass.isPropertyUnique(property)) {
       let cleanProperty = property.replace(/([^a-z])/ig, '');
       let methodName = 'getBy' + cleanProperty.charAt(0).toUpperCase() + cleanProperty.substr(1).toLowerCase();
-      Object.defineProperty(ManagerChild, methodName, {
-        enumerable: false,
-        writable: false,
-        configurable: false,
-        value: (value) => {
-          return ManagerChild.getByUniqueProperty(property, value);
-        }
-      });
+      // ManagerChild.prototype[methodName] = (value) => {
+      //   return this.getByUniqueProperty(property, value);
+      // }
+      ManagerChild.prototype[methodName] = (value) => {
+        return this.getByUniqueProperty(property, value);
+      }
+      // Object.defineProperty(ManagerChild, methodName, {
+      //   enumerable: false,
+      //   writable: false,
+      //   configurable: false,
+      //   value: (value) => {
+      //     return ManagerChild.getByUniqueProperty(property, value);
+      //   }
+      // });
     }
   });
 };

@@ -7,11 +7,12 @@ export default class Storage extends AbstractStorage{
     super(collection);
   }
 
-  get(criteria = {}) {
+  get(criteria = {}, options= {}) {
     return new Promise( (resolve, reject) => {
-      return this.collection.find(criteria, (err, items) => {
+      this.collection.find(criteria, options, (err, items) => {
         if(err) {
-          reject(err);
+          console.log(err);
+          return reject(err);
         }
         resolve(items);
       });
@@ -22,10 +23,10 @@ export default class Storage extends AbstractStorage{
     return new Promise( (resolve, reject) => {
       this.collection.insert(voData, (err, newItem) => {
         if(err) {
-          reject(err);
+          return reject(err);
         }
         else if(!newItem) {
-          reject( new StorageError('Error while inserting (no new item)') );
+          return reject( new StorageError('Error while inserting (no new item)') );
         }
         else {
           resolve(newItem);
@@ -47,7 +48,7 @@ export default class Storage extends AbstractStorage{
     return new Promise( (resolve, reject) => {
       this.collection.remove(criteria, (err, deleteRowCount) => {
         if(err) {
-          reject(err);
+          return reject(err);
         }
         resolve(deleteRowCount);
       });
