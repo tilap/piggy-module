@@ -60,4 +60,17 @@ export default class Service {
       });
     });
   }
+
+  get availableMethods() {
+    let childMethods = Object.getOwnPropertyNames(this.__proto__);
+    let OwnMethods = Object.getOwnPropertyNames(Service.prototype);
+
+    let methods = childMethods;
+    OwnMethods.forEach( method => {
+      if(methods.indexOf(method) < 0) {
+        methods.push(method);
+      }
+    })
+    return methods;
+  }
 }
