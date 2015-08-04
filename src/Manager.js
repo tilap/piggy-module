@@ -116,9 +116,11 @@ export default class Manager {
 
   getByUniqueProperty(property, value) {
     return new Promise( (resolve, reject) => {
+      // Check property is a unique one
       if(!this.constructor.validatorClass.isPropertyUnique(property)) {
         return reject(new Error('The property "' + property + '" is not unique'));
       }
+
       // @todo add cast to value
       // value = this.constructor.voClass.castVoPropertyValue(property, value);
 
@@ -192,13 +194,9 @@ export default class Manager {
   getVoFormatErrors(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve) => {
-      let errors = {};
       let validator = new this.constructor.validatorClass(vo);
       validator.validateVo();
-      if(validator.hasError()) {
-        errors = validator.errors;
-      }
-      resolve(errors);
+      resolve(validator.hasError() ? validator.errors : {});
     });
   }
 
