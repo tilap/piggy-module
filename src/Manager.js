@@ -60,17 +60,17 @@ export default class Manager {
   updateOne(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve, reject) => {
-      this.getAllVoErrors(vo)
+      return this.getAllVoErrors(vo)
         .then( errors => {
           if(Object.keys(errors).length > 0) {
             return reject(errors);
           }
           let criteria = {_id: vo.id};
-            this.storage.update(criteria, vo.data)
-              .then( () => this.get(criteria) )
-              .then(items => {
-                resolve(items[0]);
-              });
+          this.storage.update(criteria, vo.data)
+            .then( () => this.get(criteria) )
+            .then(items => {
+              resolve(items[0]);
+            });
         })
         .catch(err => {
           reject( new ManagerError(err.message) );

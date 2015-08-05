@@ -33,15 +33,15 @@ export default class Service {
 
   updateOneFromData(data, id) {
     return new Promise((resolve, reject) => {
-      this.getOneById(id).then( vo => {
+      return this.getOneById(id).then( vo => {
         if(null===vo) {
           return reject ('not found');
         }
         vo.setData(data);
-        return vo;
+        return resolve(vo);
       })
       .then( vo => {
-        this._manager.saveOne(vo).then( vo => {
+        return this._manager.saveOne(vo).then( vo => {
           return resolve(vo);
         });
       });
