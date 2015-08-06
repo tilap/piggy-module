@@ -250,6 +250,21 @@ export default class Manager {
       return resolve({});
     });
   }
+
+  // Expose a list of available method of the instance
+  // @todo: will maybe need to be recursive
+  get availableMethods() {
+    let OwnMethods = Object.getOwnPropertyNames(Manager.prototype);
+    let childMethods = Object.getOwnPropertyNames(this.__proto__);
+
+    let methods = childMethods;
+    OwnMethods.forEach( method => {
+      if(methods.indexOf(method) < 0) {
+        methods.push(method);
+      }
+    });
+    return methods;
+  }
 }
 
 
@@ -271,22 +286,16 @@ Manager.init = function(ManagerChild, VoClass, ValidatorClass) {
 
   VoClass.getPropertiesNames().forEach( property => {
     if(ValidatorClass.isPropertyUnique(property)) {
-      let cleanProperty = property.replace(/([^a-z])/ig, '');
-      let methodName = 'getBy' + cleanProperty.charAt(0).toUpperCase() + cleanProperty.substr(1).toLowerCase();
-      // ManagerChild.prototype[methodName] = (value) => {
-      //   return this.getByUniqueProperty(property, value);
-      // }
-      ManagerChild.prototype[methodName] = (value) => {
-        return this.getByUniqueProperty(property, value);
-      }
-      // Object.defineProperty(ManagerChild, methodName, {
-      //   enumerable: false,
-      //   writable: false,
-      //   configurable: false,
-      //   value: (value) => {
-      //     return ManagerChild.getByUniqueProperty(property, value);
-      //   }
-      // });
+      let cleanProperty = property.replace(/([^a-z0-9])/ig, '');
+      let methodName = 'getOneBy' + cleanProperty.charAt(0).toUpperCase() + cleanProperty.substr(1).toLowerCase();
+      Object.defineProperty(ManagerChild.prototype, methodName, {
+        enumerable: false,
+        writable: false,
+        configurable: false,
+        value: function(value) {
+          return this.getByUniqueProperty(property, value);
+        }
+      });
     }
   });
 };

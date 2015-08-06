@@ -28,7 +28,7 @@ export default class Service {
   }
 
   getOneById(id) {
-    return this._manager.getByUniqueProperty('_id', id);
+    return this._manager.getOneById(id);
   }
 
   updateOneFromData(data, id) {
@@ -70,7 +70,7 @@ export default class Service {
       if(methods.indexOf(method) < 0) {
         methods.push(method);
       }
-    })
+    });
     return methods;
   }
 }
