@@ -2,6 +2,26 @@ export default class Service {
 
   constructor(manager) {
     this._manager = manager;
+    this._context = {
+      user: null,
+      app: null
+    };
+  }
+
+  setUserContext(user=null) {
+    this._context.user = user;
+  }
+
+  hasUserContext() {
+    return this._context.user !== null;
+  }
+
+  setAppContext(app=null) {
+    this._context.app = app;
+  }
+
+  hasAppContext() {
+    return this._context.app !== null;;
   }
 
   createOneFromData(data) {
