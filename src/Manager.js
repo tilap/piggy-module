@@ -129,6 +129,7 @@ export default class Manager {
 
       this.get(criteria)
         .then( result => {
+          console.log(criteria, result);
           switch(result.length) {
             case 0:
               resolve(null);

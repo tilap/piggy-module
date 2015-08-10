@@ -1,5 +1,6 @@
 import AbstractStorage from './Abstract';
 import { StorageError } from './../Errors';
+import { ObjectId } from 'mongodb';
 
 export default class Storage extends AbstractStorage{
 
@@ -8,14 +9,18 @@ export default class Storage extends AbstractStorage{
   }
 
   get(criteria = {}, options= {}) {
+    if(criteria._id) {
+      criteria._id = ObjectId(criteria._id);
+    }
     return new Promise( (resolve, reject) => {
-      this.collection.find(criteria, options, (err, items) => {
-        if(err) {
-          console.log(err);
-          return reject(err);
-        }
-        resolve(items);
-      });
+      this.collection
+        .find(criteria, options)
+        .toArray( (err, items) => {
+          if(err) {
+            return reject(err);
+          }
+          resolve(items);
+        });
     });
   }
 

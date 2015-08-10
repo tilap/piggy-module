@@ -2,6 +2,11 @@ export default class Service {
 
   constructor(manager) {
     this._manager = manager;
+    this._context = {};
+  }
+
+  setContext(key, value) {
+    this._context[key]=value;
   }
 
   createOneFromData(data) {
