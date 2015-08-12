@@ -10,14 +10,14 @@ export default class Service {
   }
 
   createOneFromData(data) {
+    let vo = this._manager.getNewVo(data);
     return new Promise((resolve, reject) => {
-      let vo = this._manager.getNewVo(data);
-      return this._manager.saveOne(vo)
+      this._manager.saveOne(vo)
         .catch(err => {
           return reject(err);
         })
         .then(user => {
-          resolve(user);
+          return resolve(user);
         });
     });
   }
@@ -26,9 +26,12 @@ export default class Service {
     return this._manager.get(criteria, options);
   }
 
-  getByPage(page=1, npp=10, orderby='username', order=1) {
-    let criteria = {};
+  getByPage(criteria, page=1, limit=15, orderby='id', order=1) {
+    page = page > 0  || 1;
     let options = {};
+    options.limit = limit;
+    options.skip = (page-1) * limit;
+    options.sort = [[orderby, order ? 'asc' : 'desc']];
     return this.get(criteria, options);
   }
 
@@ -38,15 +41,15 @@ export default class Service {
 
   updateOneFromData(data, id) {
     return new Promise((resolve, reject) => {
-      return this.getOneById(id).then( vo => {
+      this.getOneById(id).then( vo => {
         if(null===vo) {
           return reject ('not found');
         }
         vo.setData(data);
-        return resolve(vo);
+        return vo;
       })
       .then( vo => {
-        return this._manager.saveOne(vo).then( vo => {
+        this._manager.saveOne(vo).then( vo => {
           return resolve(vo);
         });
       });

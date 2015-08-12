@@ -19,7 +19,6 @@ export default class ModuleError {
   }
 }
 
-export class ServiceError extends ModuleError {}
 export class ManagerError extends ModuleError {}
 export class StorageError extends ModuleError {}
 export class ValidatorError extends ModuleError {}

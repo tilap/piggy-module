@@ -1,5 +1,3 @@
-import ManagerError from './Errors';
-
 export default class Manager {
 
   constructor(storage) {
@@ -8,7 +6,7 @@ export default class Manager {
 
   assumeIsOwnVoClass(vo) {
     if(vo.constructor.name !== this.constructor.voClass.name) {
-      throw new ManagerError('Require a ' + this.constructor.voClass.name + ' class');
+      throw new Error('Manager.assumeIsOwnVoClass() error: ' + this.constructor.voClass.name + ' expected class instace');
     }
   }
 
@@ -19,7 +17,7 @@ export default class Manager {
   get(criteria={}, options={}) {
     return this.storage.get(criteria, options)
       .catch( err => {
-        throw new ManagerError(err.message);
+        throw new Error('Manager.get() error: ' + err.message);
       })
       .then( items => {
         let res = [];
@@ -29,8 +27,12 @@ export default class Manager {
         return res;
       })
       .catch( err => {
-        throw new ManagerError(err.message);
+        throw new Error('Manager.get() error#2: ' + err.message);
       });
+  }
+
+  getByPage(criteria, page=1, limit=15, orderby='id', order=1) {
+    return this.storage.getgetByPage(criteria, page, limit, orderby, order);
   }
 
   saveOne(vo) {
@@ -42,43 +44,63 @@ export default class Manager {
     return new Promise( (resolve, reject) => {
       this.getAllVoErrors(vo)
         .then( errors => {
-          if(Object.keys(errors).length>0) {
+          if(Object.keys(errors).length > 0) {
             return reject(errors);
           }
-
-          this.storage.insert(vo.data)
-            .then(newItemData => {
-              resolve(this.getNewVo(newItemData));
+          const data = [vo.data];
+          this.storage.insert(data)
+            .catch(err => {
+              throw new Error('Manager.insertOne() error: ' + err.message);
             })
+            .then(newItemsData => {
+              if(newItemsData.constructor !== Array || newItemsData.length!==1) {
+                return resolve(null);
+              }
+              resolve(this.getNewVo(newItemsData[0]));
+            });
         })
         .catch(err => {
-          reject( new ManagerError(err.message) );
+          reject( new Error(err.message) );
         });
     });
   }
 
   updateOne(vo) {
     this.assumeIsOwnVoClass(vo);
+    let criteria = {_id: vo.id};
+    console.log('updateOne');
     return new Promise( (resolve, reject) => {
-      return this.getAllVoErrors(vo)
+      this.getAllVoErrors(vo)
         .then( errors => {
+          console.log('errors', errors);
           if(Object.keys(errors).length > 0) {
             return reject(errors);
           }
-          let criteria = {_id: vo.id};
-          this.storage.update(criteria, vo.data)
-            .then( () => this.get(criteria) )
-            .then(items => {
-              resolve(items[0]);
+
+          return this.storage.update(criteria, vo.data)
+            .catch(err => {
+console.log('err', err);
+              throw new Error('Manager.updateOne() error: ' + err.message);
+            })
+            .then( (affetcted) => {
+console.log('nb affected', affetcted);
+              return this.get(criteria)
+                .then(items => {
+console.log('youhou', items);
+                  return resolve(items[0]);
+                });
             });
         })
         .catch(err => {
-          reject( new ManagerError(err.message) );
+          reject( err );
         });
     });
   }
 
   delete(vosArr) {
+    vosArr.forEach( vo => {
+      this.assumeIsOwnVoClass(vo);
+    });
     return new Promise( (resolve, reject) => {
       let ids = [];
       vosArr.forEach( vo => {
