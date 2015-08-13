@@ -63,7 +63,7 @@ export default class Vo {
   }
 
   set status(value) {
-    throw new VoError('Status cannot be changed');
+    throw new Error('Vo Status cannot be changed');
   }
 
   castVoPropertyValue(key, value) {
@@ -121,21 +121,6 @@ export default class Vo {
     this.assumePropertyExists(key);
     return this.getPropertyConfig(key).default || null;
   }
-
-  // static getPropertyValidators(key) {
-  //   this.assumePropertyExists(key);
-  //   return this.getPropertyConfig(key).validators || [];
-  // }
-
-  // static isPropertyUnique(key) {
-  //   this.assumePropertyExists(key);
-  //   return this.getPropertyConfig(key).unique || false;
-  // }
-
-  // static isPropertyRequired(key) {
-  //   this.assumePropertyExists(key);
-  //   return this.getPropertyConfig(key).required || false;
-  // }
 }
 
 Object.defineProperty(Vo, 'STATUS', {
@@ -150,9 +135,7 @@ Object.defineProperty(Vo, 'STATUS', {
 });
 
 Vo.init = function(VoChild, properties) {
-
   let objectProperties = {};
-
   Object.keys(properties).forEach((name) => {
     if (VoChild.hasOwnProperty(name)) {
       throw new Error('Property ' + name + ' is a reserved keyname');

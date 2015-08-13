@@ -68,25 +68,20 @@ export default class Manager {
   updateOne(vo) {
     this.assumeIsOwnVoClass(vo);
     let criteria = {_id: vo.id};
-    console.log('updateOne');
     return new Promise( (resolve, reject) => {
       this.getAllVoErrors(vo)
         .then( errors => {
-          console.log('errors', errors);
           if(Object.keys(errors).length > 0) {
             return reject(errors);
           }
 
           return this.storage.update(criteria, vo.data)
             .catch(err => {
-console.log('err', err);
               throw new Error('Manager.updateOne() error: ' + err.message);
             })
             .then( (affetcted) => {
-console.log('nb affected', affetcted);
               return this.get(criteria)
                 .then(items => {
-console.log('youhou', items);
                   return resolve(items[0]);
                 });
             });

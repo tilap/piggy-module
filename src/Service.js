@@ -9,6 +9,10 @@ export default class Service {
     this._context[key]=value;
   }
 
+  setFullContext(context) {
+    this._context = context;
+  }
+
   createOneFromData(data) {
     let vo = this._manager.getNewVo(data);
     return new Promise((resolve, reject) => {
@@ -27,11 +31,12 @@ export default class Service {
   }
 
   getByPage(criteria, page=1, limit=15, orderby='id', order=1) {
-    page = page > 0  || 1;
+    page = page > 0 ? page : 1;
+    order = (order==='desc' || order===false || order===-1 || order==='-1') ? 'desc' : 'asc';
     let options = {};
     options.limit = limit;
     options.skip = (page-1) * limit;
-    options.sort = [[orderby, order ? 'asc' : 'desc']];
+    options.sort = [[orderby, order]];
     return this.get(criteria, options);
   }
 
@@ -51,6 +56,9 @@ export default class Service {
       .then( vo => {
         this._manager.saveOne(vo).then( vo => {
           return resolve(vo);
+        })
+        .catch(err => {
+          return reject(err);
         });
       });
     });
