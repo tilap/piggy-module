@@ -11,8 +11,8 @@ function gulpBuild(source) {
   return gulp.src(source, { base : config.src })
     .pipe(sourcemaps.init())
     .pipe(babel({
-      compact: false,
-      comments: true,
+      compact: true,
+      comments: false,
       blacklist: ['regenerator']
     }))
     .pipe(sourcemaps.write('.'))

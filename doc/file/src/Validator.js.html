@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/Validator.js | Piggy-Module API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="git+https://github.com/tilap/piggy-module.git">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div data-ice="classWrap">
+  <h2>Class</h2>
+  <ul>
+    
+  <li data-ice="classDoc"><span><a href="class/src/Storage/Abstract.js~AbstractStorage.html">AbstractStorage</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Manager.js~Manager.html">Manager</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~ModuleError.html">ModuleError</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Service.js~Service.html">Service</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Storage/Db.js~Storage.html">Storage</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~StorageError.html">StorageError</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Validator.js~Validator.html">Validator</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~ValidatorError.html">ValidatorError</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Vo.js~Vo.html">Vo</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~VoError.html">VoError</a></span></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/Validator.js</h1>
+<pre class="source-code line-number"><code class="prettyprint linenums" data-ice="content">import { ValidatorError } from &apos;./Errors&apos;;
+import validatorLib from &apos;./utils/validatorLib&apos;;
+
+/**
+ * Class to validate properties of a Vo
+ */
+export default class Validator {
+
+  /**
+   * @param {?Vo} vo - a Vo to validate
+   */
+  constructor(vo=null) {
+    /** @type {Vo} */
+    this._vo = vo;
+    /** @type {Object} - associated key-val as property name / array of errors*/
+    this.errors = {};
+  }
+
+  /**
+   * Validate all the properties of the current Vo
+   * @return {Validator}
+   * @throw {ValidatorError}
+   * @access public
+   */
+  validateVo() {
+    let properties = this._vo.constructor.getPropertiesNames();
+    this.errors = {};
+    properties.forEach( property =&gt; {
+      try {
+        this.constructor.checkProperty(property, this._vo[property]);
+      }
+      catch(err) {
+        this.errors[property] = err.message;
+      }
+    });
+    return this;
+  }
+
+  /**
+   * To know if the validation failed
+   * @return {Boolean}
+   * @access public
+   */
+  hasError() {
+    return Object.keys(this.errors).length &gt; 0;
+  }
+
+  /**
+   * Is a property unique?
+   * @param {String} property - the property name
+   * @return {Boolean}
+   * @access public
+   */
+  static isPropertyUnique(property) {
+    return this.uniques.indexOf(property) &gt; -1;
+  }
+
+  /**
+   * Is a property required?
+   * @param {String} property - the property name
+   * @return {Boolean}
+   * @access public
+   */
+  static isPropertyRequired(property) {
+    return this.required.indexOf(property) &gt; -1;
+  }
+
+  /**
+   * Is there any validation rule for a given property
+   * @param {String} property - the property name
+   * @return {Boolean}
+   * @access public
+   */
+  static hasRulesFor(property) {
+    return this.rules[property] ? true : false;
+  }
+
+  /**
+   * Get the list of validation rules
+   * @param {String} property - the property name
+   * @return {Array}
+   * @access public
+   */
+  static getRulesFor(property) {
+    return this.rules[property] ? this.rules[property] : [];
+  }
+
+  /**
+   * Does a property need to be checked?
+   * @param {String} property - the property name
+   * @param {any} value - the property value
+   * @return {Array}
+   * @access public
+   */
+  static needToCheckProperty(property, value) {
+    let skipIfEmpty = !this.isPropertyRequired(property);
+    let isEmpty = !Validator.validate(&apos;required&apos;, value);
+
+    return (isEmpty &amp;&amp; skipIfEmpty) ? false : true;
+  }
+
+  /**
+   * Check a property value
+   * @param {String} property - the property name
+   * @param {any} value - the property value
+   * @return {true}
+   * @throw {ValidatorError}
+   * @access public
+   */
+  static checkProperty(property, value) {
+    if(this.needToCheckProperty(property, value)) {
+      this.getRulesFor(property).forEach( validator =&gt; {
+        let args = validator.args || [];
+        let skipIfEmpty = !this.isPropertyRequired(property);
+
+        if(args.constructor!==Array) {
+          args = [args];
+        }
+        if(!this.validate(validator.fct, value, args, skipIfEmpty)) {
+          throw new ValidatorError(validator.msg);
+        }
+      });
+    }
+    return true;
+  }
+
+  /**
+   * Run a validator rules and get the result
+   * @param {any} fct - the validation function or validator string name
+   * @param {any} value - the property value
+   * @param {Array} args - the validation rule options
+   * @param {Boolean} skipIfEmpty - skip to check if the property is empty
+   * @return {Boolean}
+   * @throw {ValidatorError}
+   * @access public
+   */
+  static validate(fct, value, args=[], skipIfEmpty=false) {
+    // @tocheck if really usefull...
+    if(skipIfEmpty &amp;&amp; !value) {
+      return true;
+    }
+
+    let funcArgs = [value].concat(args);
+    if(fct.constructor === Function) {
+      return fct.apply(null, funcArgs);
+    }
+    if(fct.constructor === String) {
+      return validatorLib[fct].apply(null, funcArgs);
+    }
+    throw new ValidatorError(&apos;Wrong validator function&apos;);
+  }
+}
+
+Validator.initFromVoClass = function(ValidatorChild, properties) {
+  let ruleset = {};
+  let requiredProperties = [];
+  let uniqueProperties = [];
+
+  Object.keys(properties).forEach((name) =&gt; {
+    let isRequired = properties[name].required &amp;&amp; true===properties[name].required;
+    let isUnique = properties[name].unique &amp;&amp; true===properties[name].unique;
+    let validators = properties[name].validators || [];
+    ruleset[name] = [];
+
+    if(isUnique) {
+      uniqueProperties.push(name);
+    }
+    if(isRequired) {
+      requiredProperties.push(name);
+    }
+
+    validators.forEach( itemCfg =&gt; {
+      if(!itemCfg.fct) {
+        throw new Error(&apos;Configuration error: validator need a fct&apos;);
+      }
+      ruleset[name].push({
+        fct: itemCfg.fct,
+        msg: itemCfg.msg || &apos;&apos;,
+        args: itemCfg.args || [],
+        skipIfEmpty: !isRequired
+      });
+    });
+  });
+
+  Object.defineProperty(ValidatorChild, &apos;rules&apos;, {
+    enumerable: false,
+    writable: false,
+    configurable: false,
+    value: ruleset
+  });
+
+  Object.defineProperty(ValidatorChild, &apos;required&apos;, {
+    enumerable: false,
+    writable: false,
+    configurable: false,
+    value: requiredProperties
+  });
+
+  Object.defineProperty(ValidatorChild, &apos;uniques&apos;, {
+    enumerable: false,
+    writable: false,
+    configurable: false,
+    value: uniqueProperties
+  });
+};
+</code></pre>
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.2.1)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
