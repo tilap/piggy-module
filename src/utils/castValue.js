@@ -1,5 +1,12 @@
 import sanitizer from 'validator';
 
+/**
+ * Cast a value to match a given type
+ * @param {any} value - the value to cast
+ * @param {any} type - type of the object: Array, String, Object, ...
+ * @return {any} - the value casted
+ * @throw {Error} - if cast failed
+ */
 let castValue = module.exports = function(value, type) {
 
   if (value == null) {

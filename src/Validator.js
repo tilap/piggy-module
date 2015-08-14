@@ -1,13 +1,27 @@
 import { ValidatorError } from './Errors';
 import validatorLib from './utils/validatorLib';
 
+/**
+ * Class to validate properties of a Vo
+ */
 export default class Validator {
 
+  /**
+   * @param {?Vo} vo - a Vo to validate
+   */
   constructor(vo=null) {
+    /** @type {Vo} */
     this._vo = vo;
+    /** @type {Object} - associated key-val as property name / array of errors*/
     this.errors = {};
   }
 
+  /**
+   * Validate all the properties of the current Vo
+   * @return {Validator}
+   * @throw {ValidatorError}
+   * @access public
+   */
   validateVo() {
     let properties = this._vo.constructor.getPropertiesNames();
     this.errors = {};
@@ -22,27 +36,62 @@ export default class Validator {
     return this;
   }
 
+  /**
+   * To know if the validation failed
+   * @return {Boolean}
+   * @access public
+   */
   hasError() {
     return Object.keys(this.errors).length > 0;
   }
 
+  /**
+   * Is a property unique?
+   * @param {String} property - the property name
+   * @return {Boolean}
+   * @access public
+   */
   static isPropertyUnique(property) {
     return this.uniques.indexOf(property) > -1;
   }
 
+  /**
+   * Is a property required?
+   * @param {String} property - the property name
+   * @return {Boolean}
+   * @access public
+   */
   static isPropertyRequired(property) {
     return this.required.indexOf(property) > -1;
   }
 
-  static hasRulesFor(key) {
-    return this.rules[key] ? true : false;
+  /**
+   * Is there any validation rule for a given property
+   * @param {String} property - the property name
+   * @return {Boolean}
+   * @access public
+   */
+  static hasRulesFor(property) {
+    return this.rules[property] ? true : false;
   }
 
-  // Get a property validation rules
-  static getRulesFor(key) {
-    return this.rules[key] ? this.rules[key] : [];
+  /**
+   * Get the list of validation rules
+   * @param {String} property - the property name
+   * @return {Array}
+   * @access public
+   */
+  static getRulesFor(property) {
+    return this.rules[property] ? this.rules[property] : [];
   }
 
+  /**
+   * Does a property need to be checked?
+   * @param {String} property - the property name
+   * @param {any} value - the property value
+   * @return {Array}
+   * @access public
+   */
   static needToCheckProperty(property, value) {
     let skipIfEmpty = !this.isPropertyRequired(property);
     let isEmpty = !Validator.validate('required', value);
@@ -50,6 +99,14 @@ export default class Validator {
     return (isEmpty && skipIfEmpty) ? false : true;
   }
 
+  /**
+   * Check a property value
+   * @param {String} property - the property name
+   * @param {any} value - the property value
+   * @return {true}
+   * @throw {ValidatorError}
+   * @access public
+   */
   static checkProperty(property, value) {
     if(this.needToCheckProperty(property, value)) {
       this.getRulesFor(property).forEach( validator => {
@@ -67,7 +124,16 @@ export default class Validator {
     return true;
   }
 
-  // Run a validator rules and get the result
+  /**
+   * Run a validator rules and get the result
+   * @param {any} fct - the validation function or validator string name
+   * @param {any} value - the property value
+   * @param {Array} args - the validation rule options
+   * @param {Boolean} skipIfEmpty - skip to check if the property is empty
+   * @return {Boolean}
+   * @throw {ValidatorError}
+   * @access public
+   */
   static validate(fct, value, args=[], skipIfEmpty=false) {
     // @tocheck if really usefull...
     if(skipIfEmpty && !value) {
@@ -83,7 +149,6 @@ export default class Validator {
     }
     throw new ValidatorError('Wrong validator function');
   }
-
 }
 
 Validator.initFromVoClass = function(ValidatorChild, properties) {

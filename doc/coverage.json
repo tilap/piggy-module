@@ -1,0 +1,35 @@
+{
+  "coverage": "94.11%",
+  "expectCount": 85,
+  "actualCount": 80,
+  "files": {
+    "src/Storage/Abstract.js": {
+      "expectCount": 7,
+      "actualCount": 7
+    },
+    "src/Manager.js": {
+      "expectCount": 19,
+      "actualCount": 18
+    },
+    "src/Errors.js": {
+      "expectCount": 6,
+      "actualCount": 3
+    },
+    "src/Service.js": {
+      "expectCount": 11,
+      "actualCount": 11
+    },
+    "src/Storage/Db.js": {
+      "expectCount": 7,
+      "actualCount": 7
+    },
+    "src/Validator.js": {
+      "expectCount": 12,
+      "actualCount": 12
+    },
+    "src/Vo.js": {
+      "expectCount": 23,
+      "actualCount": 22
+    }
+  }
+}

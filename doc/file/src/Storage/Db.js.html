@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">src/Storage/Db.js | Piggy-Module API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="git+https://github.com/tilap/piggy-module.git">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div data-ice="classWrap">
+  <h2>Class</h2>
+  <ul>
+    
+  <li data-ice="classDoc"><span><a href="class/src/Storage/Abstract.js~AbstractStorage.html">AbstractStorage</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Manager.js~Manager.html">Manager</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~ModuleError.html">ModuleError</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Service.js~Service.html">Service</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Storage/Db.js~Storage.html">Storage</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~StorageError.html">StorageError</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Validator.js~Validator.html">Validator</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~ValidatorError.html">ValidatorError</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Vo.js~Vo.html">Vo</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~VoError.html">VoError</a></span></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/Storage/Db.js</h1>
+<pre class="source-code line-number"><code class="prettyprint linenums" data-ice="content">import AbstractStorage from &apos;./Abstract&apos;;
+import { ObjectId } from &apos;mongodb&apos;;
+
+/**
+ * Manage data from a mongodb collection.
+ */
+export default class Storage extends AbstractStorage{
+
+  /**
+   * @param {Object} collection - A mongodb collection
+   */
+  constructor(collection) {
+    super(collection);
+  }
+
+  /**
+   * Get a list of data Object from criteria and options
+   *
+   * @param {Object} criteria - mongodb criteria style
+   * @param {Object} options - mongodb options style
+   * @return {Promise&lt;Object[], Error&gt;}
+   * @access public
+   * @override
+   */
+  get(criteria = {}, options= {}) {
+    criteria = this._prepareCriteria(criteria);
+    return new Promise( (resolve, reject) =&gt; {
+      this.collection
+        .find(criteria, options)
+        .toArray( (err, items) =&gt; {
+          if(err) {
+            return reject( new Error(&apos;Storage error in get()&apos;));
+          }
+          resolve(items);
+        });
+    });
+  }
+
+  /**
+   * Get a paginated list of data Object
+   *
+   * @param {Object} criteria - mongodb criteria style
+   * @param {integer} page - the page to retrieve
+   * @param {integer} limit - number of item per page
+   * @param {string} orderby - a mongodb collection property to order the list result
+   * @param {string} order - &apos;asc&apos; or &apos;desc&apos;
+   * @return {Promise&lt;Object[], Error&gt;}
+   * @access public
+   */
+  getByPage(criteria, page=1, limit=15, orderby=&apos;id&apos;, order=&apos;asc&apos;) {
+    page = page &gt; 0  || 1;
+    let options = {};
+    options.limit = limit;
+    options.skip = (page-1) * limit;
+    options.sort = [[ orderby, order ? &apos;asc&apos; : &apos;desc&apos;]];
+    return this.get(criteria, options);
+  }
+
+  /**
+   * Insert many data Object in database
+   *
+   * @param {Object[]} dataArray - a list of data Object
+   * @return {Promise&lt;Object[], Error&gt;} - inserted data Object list
+   * @access public
+   * @override
+   */
+  insert(dataArray) {
+    if(dataArray.constructor !== Array ) {
+      throw new Error(&apos;DB insert: Expected array&apos;);
+    }
+
+    return new Promise( (resolve, reject) =&gt; {
+      this.collection.insert(dataArray, (err, insertResult) =&gt; {
+        if(err) {
+          return reject( new Error (&apos;Storage error: insert() &apos; + err.message) );
+        }
+        let insertedDatas = insertResult.ops;
+        resolve(insertedDatas);
+      });
+    });
+  }
+
+  /**
+   * Update collection from criteria
+   *
+   * @param {Object} criteria - MongoDb criteria Object
+   * @param {Object} newValues - key-value Object with new data
+   * @param {Object} options - MongoDb options
+   * @param {boolean} options.upsert - insert if not exists
+   * @param {boolean} options.multi - update multi Object enabled
+   * @return {Promise&lt;integer, Error&gt;} - number of updated items
+   * @access public
+   * @override
+   */
+  update(criteria, newValues, options={upsert: false, multi: true}) {
+    criteria = this._prepareCriteria(criteria);
+    newValues = this._stripIdCriteria(newValues);
+    return new Promise( (resolve, reject) =&gt; {
+      this.collection.update(criteria, { $set: newValues}, options, (err, updateResult) =&gt; {
+        if(err) {
+          return reject(new Error(&apos;Storage error: update() &apos; + err.message));
+        }
+        resolve(updateResult.result.n);
+      });
+    });
+  }
+
+  /**
+   * Delete collection Object from criteria
+   *
+   * @param {Object} criteria - MongoDb criteria Object
+   * @return {Promise&lt;integer, Error&gt;} - number of deleted items
+   * @access public
+   * @override
+   */
+  delete(criteria) {
+    criteria = this._prepareCriteria(criteria);
+    return new Promise( (resolve, reject) =&gt; {
+      this.collection.remove(criteria, (err, deleteResult) =&gt; {
+        if(err) {
+          return reject( new Error(&apos;Storage error: delete() &apos; + err.message) );
+        }
+        let affetctedRows = deleteResult.result.n;
+        resolve(affetctedRows);
+      });
+    });
+  }
+
+  /**
+   * Prepare criteria Object
+   *
+   * @param {Object} criteria - MongoDb criteria Object
+   * @return {Object} criteria - MongoDb criteria Object with first level id string replaced by ObjectId
+   * @access private
+   *
+   * @todo: manage multi level, array, recursive replacement
+   */
+  _prepareCriteria(criteria) {
+    if(criteria._id &amp;&amp; criteria._id.constructor === String) {
+      criteria._id = ObjectId(criteria._id);
+    }
+    return criteria;
+  }
+
+  /**
+   * Remove id criteria if any
+   *
+   * @param {Object} criteria - MongoDb criteria Object
+   * @return {Object} criteria - MongoDb criteria Object without first level id criteria
+   * @access private
+   */
+  _stripIdCriteria(criteria) {
+    if(criteria._id) {
+      delete criteria._id;
+    }
+    return criteria;
+  }
+}
+</code></pre>
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.2.1)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

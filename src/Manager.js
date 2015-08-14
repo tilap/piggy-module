@@ -1,19 +1,43 @@
+/**
+ * Manage Vo items, sending and getting them to the Storage
+ */
 export default class Manager {
 
   constructor(storage) {
+    /** @type {Storage} - an instance storage*/
     this.storage = storage;
   }
 
+  /**
+   * Make sure an object has the current Manager Vo class
+   *
+   * @param {Vo} vo
+   * @throw {Error}
+   */
   assumeIsOwnVoClass(vo) {
     if(vo.constructor.name !== this.constructor.voClass.name) {
       throw new Error('Manager.assumeIsOwnVoClass() error: ' + this.constructor.voClass.name + ' expected class instace');
     }
   }
 
+  /**
+   * Get a new Vo, and fill it with data if any
+   *
+   * @param {?object} data
+   * @return {Vo}
+   */
   getNewVo(data={}) {
     return new this.constructor.voClass(data);
   }
 
+  /**
+   * Get a list of Vo
+   *
+   * @param {Object} criteria - mongodb-like criteria style
+   * @param {Object} options - mongodb-like options style
+   * @return {Promise<Vo[], Error>}
+   * @access public
+   */
   get(criteria={}, options={}) {
     return this.storage.get(criteria, options)
       .catch( err => {
@@ -31,14 +55,37 @@ export default class Manager {
       });
   }
 
+  /**
+   * Get a paginated list of Vo
+   *
+   * @param {Object} criteria - mongodb-like criteria style
+   * @param {integer} page - the page to retrieve
+   * @param {integer} limit - number of item per page
+   * @param {string} orderby - a Vo property to order by
+   * @param {string} order - 'asc' or 'desc'
+   * @return {Promise<Vo[], Error>}
+   * @access public
+   */
   getByPage(criteria, page=1, limit=15, orderby='id', order=1) {
     return this.storage.getgetByPage(criteria, page, limit, orderby, order);
   }
 
+  /**
+   * Save a vo in storage, update if exists, or insert
+   * @param {Vo} vo
+   * @return {Promise<Vo[], Error>}
+   * @access public
+   */
   saveOne(vo) {
     return vo.id ? this.updateOne(vo) : this.insertOne(vo);
   }
 
+  /**
+   * Insert a vo in storage
+   * @param {Vo} vo
+   * @return {Promise<Vo[], Error>}
+   * @access public
+   */
   insertOne(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve, reject) => {
@@ -65,6 +112,12 @@ export default class Manager {
     });
   }
 
+  /**
+   * Update a vo in storage
+   * @param {Vo} vo
+   * @return {Promise<Vo[], Error>}
+   * @access public
+   */
   updateOne(vo) {
     this.assumeIsOwnVoClass(vo);
     let criteria = {_id: vo.id};
@@ -92,6 +145,12 @@ export default class Manager {
     });
   }
 
+  /**
+   * Delete a list of Vo in storage
+   * @param {Vo[]} Vo to delete
+   * @return {Promise<boolean, Error>} number of deleted item
+   * @access public
+   */
   delete(vosArr) {
     vosArr.forEach( vo => {
       this.assumeIsOwnVoClass(vo);
@@ -115,6 +174,12 @@ export default class Manager {
     });
   }
 
+  /**
+   * Delete a vo in storage
+   * @param {Vo} vo
+   * @return {Promise<boolean, Error>} number of deleted item
+   * @access public
+   */
   deleteOne(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve, reject) => {
@@ -131,6 +196,13 @@ export default class Manager {
     });
   }
 
+  /**
+   * Get a Vo from a unique property value
+   * @param {string} property
+   * @param {any} value - the unique property value to look for
+   * @return {Promise<Vo, Error>}
+   * @access public
+   */
   getByUniqueProperty(property, value) {
     return new Promise( (resolve, reject) => {
       // Check property is a unique one
@@ -162,7 +234,13 @@ export default class Manager {
     });
   }
 
-  // Get objects having a unique property in the values array
+  /**
+   * Get a list of Vo from a unique property and many values
+   * @param {string} property
+   * @param {any[]} values - the unique property value to look for
+   * @return {Promise<Vo[], Error>}
+   * @access public
+   */
   getByUniquePropertyM(property, values) {
     return new Promise( (resolve, reject) => {
       if(!this.constructor.validatorClass.isPropertyUnique(property)) {
@@ -184,6 +262,13 @@ export default class Manager {
     });
   }
 
+  /**
+   * Get a list of all error of a Vo
+   * @param {Vo} vo - the Vo to check
+   * @param {string[]} skipProperties - a list of properties not to check
+   * @return {Promise<object, Error>} - list of message errors (key: property, value: message)
+   * @access public
+   */
   getAllVoErrors(vo, skipProperties= []) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve, reject) => {
@@ -208,6 +293,12 @@ export default class Manager {
 
   }
 
+  /**
+   * Get a list of the properties format error of a Vo
+   * @param {Vo} vo - the Vo to check
+   * @return {Promise<object, Error>} - list of message errors (key: property, value: message)
+   * @access public
+   */
   getVoFormatErrors(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve) => {
@@ -217,6 +308,12 @@ export default class Manager {
     });
   }
 
+  /**
+   * Get a list of the unique properties error of a Vo
+   * @param {Vo} vo - the Vo to check
+   * @return {Promise<object, Error>} - list of message errors (key: property, value: message)
+   * @access public
+   */
   getVoUniqueErrors(vo) {
     this.assumeIsOwnVoClass(vo);
     let result = {};
@@ -250,7 +347,6 @@ export default class Manager {
 
     return Promise.all(promises)
       .then( propertiesWithError => {
-
         propertiesWithError.forEach( property => {
           if(property) {
             result[property] = 'unique';
@@ -260,7 +356,12 @@ export default class Manager {
       });
   }
 
-  // To extend to run business check on the VO
+  /**
+   * Get a list of the  properties business errors of a Vo. To be override by business specific needs
+   * @param {Vo} vo - the Vo to check
+   * @return {Promise<object, Error>} - list of message errors (key: property, value: message)
+   * @access public
+   */
   getVoBusinessErrors(vo) {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve) => {
@@ -268,8 +369,12 @@ export default class Manager {
     });
   }
 
-  // Expose a list of available method of the instance
-  // @todo: will maybe need to be recursive
+  /**
+   * Get the list of Class available methods
+   *
+   * @return {String[]} - the list of the callable methods
+   * @access public
+   */
   get availableMethods() {
     let OwnMethods = Object.getOwnPropertyNames(Manager.prototype);
     let childMethods = Object.getOwnPropertyNames(this.__proto__);

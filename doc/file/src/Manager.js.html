@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/Manager.js | Piggy-Module API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+</head>
+<body class="layout-container">
+
+<header>
+  <a href="./">Home</a>
+  <a href="identifiers.html">Identifier</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="git+https://github.com/tilap/piggy-module.git">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div data-ice="classWrap">
+  <h2>Class</h2>
+  <ul>
+    
+  <li data-ice="classDoc"><span><a href="class/src/Storage/Abstract.js~AbstractStorage.html">AbstractStorage</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Manager.js~Manager.html">Manager</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~ModuleError.html">ModuleError</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Service.js~Service.html">Service</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Storage/Db.js~Storage.html">Storage</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~StorageError.html">StorageError</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Validator.js~Validator.html">Validator</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~ValidatorError.html">ValidatorError</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Vo.js~Vo.html">Vo</a></span></li>
+<li data-ice="classDoc"><span><a href="class/src/Errors.js~VoError.html">VoError</a></span></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/Manager.js</h1>
+<pre class="source-code line-number"><code class="prettyprint linenums" data-ice="content">/**
+ * Manage Vo items, sending and getting them to the Storage
+ */
+export default class Manager {
+
+  constructor(storage) {
+    /** @type {Storage} - an instance storage*/
+    this.storage = storage;
+  }
+
+  /**
+   * Make sure an object has the current Manager Vo class
+   *
+   * @param {Vo} vo
+   * @throw {Error}
+   */
+  assumeIsOwnVoClass(vo) {
+    if(vo.constructor.name !== this.constructor.voClass.name) {
+      throw new Error(&apos;Manager.assumeIsOwnVoClass() error: &apos; + this.constructor.voClass.name + &apos; expected class instace&apos;);
+    }
+  }
+
+  /**
+   * Get a new Vo, and fill it with data if any
+   *
+   * @param {?object} data
+   * @return {Vo}
+   */
+  getNewVo(data={}) {
+    return new this.constructor.voClass(data);
+  }
+
+  /**
+   * Get a list of Vo
+   *
+   * @param {Object} criteria - mongodb-like criteria style
+   * @param {Object} options - mongodb-like options style
+   * @return {Promise&lt;Vo[], Error&gt;}
+   * @access public
+   */
+  get(criteria={}, options={}) {
+    return this.storage.get(criteria, options)
+      .catch( err =&gt; {
+        throw new Error(&apos;Manager.get() error: &apos; + err.message);
+      })
+      .then( items =&gt; {
+        let res = [];
+        items.map( item =&gt; {
+          res.push(this.getNewVo(item));
+        });
+        return res;
+      })
+      .catch( err =&gt; {
+        throw new Error(&apos;Manager.get() error#2: &apos; + err.message);
+      });
+  }
+
+  /**
+   * Get a paginated list of Vo
+   *
+   * @param {Object} criteria - mongodb-like criteria style
+   * @param {integer} page - the page to retrieve
+   * @param {integer} limit - number of item per page
+   * @param {string} orderby - a Vo property to order by
+   * @param {string} order - &apos;asc&apos; or &apos;desc&apos;
+   * @return {Promise&lt;Vo[], Error&gt;}
+   * @access public
+   */
+  getByPage(criteria, page=1, limit=15, orderby=&apos;id&apos;, order=1) {
+    return this.storage.getgetByPage(criteria, page, limit, orderby, order);
+  }
+
+  /**
+   * Save a vo in storage, update if exists, or insert
+   * @param {Vo} vo
+   * @return {Promise&lt;Vo[], Error&gt;}
+   * @access public
+   */
+  saveOne(vo) {
+    return vo.id ? this.updateOne(vo) : this.insertOne(vo);
+  }
+
+  /**
+   * Insert a vo in storage
+   * @param {Vo} vo
+   * @return {Promise&lt;Vo[], Error&gt;}
+   * @access public
+   */
+  insertOne(vo) {
+    this.assumeIsOwnVoClass(vo);
+    return new Promise( (resolve, reject) =&gt; {
+      this.getAllVoErrors(vo)
+        .then( errors =&gt; {
+          if(Object.keys(errors).length &gt; 0) {
+            return reject(errors);
+          }
+          const data = [vo.data];
+          this.storage.insert(data)
+            .catch(err =&gt; {
+              throw new Error(&apos;Manager.insertOne() error: &apos; + err.message);
+            })
+            .then(newItemsData =&gt; {
+              if(newItemsData.constructor !== Array || newItemsData.length!==1) {
+                return resolve(null);
+              }
+              resolve(this.getNewVo(newItemsData[0]));
+            });
+        })
+        .catch(err =&gt; {
+          reject( new Error(err.message) );
+        });
+    });
+  }
+
+  /**
+   * Update a vo in storage
+   * @param {Vo} vo
+   * @return {Promise&lt;Vo[], Error&gt;}
+   * @access public
+   */
+  updateOne(vo) {
+    this.assumeIsOwnVoClass(vo);
+    let criteria = {_id: vo.id};
+    return new Promise( (resolve, reject) =&gt; {
+      this.getAllVoErrors(vo)
+        .then( errors =&gt; {
+          if(Object.keys(errors).length &gt; 0) {
+            return reject(errors);
+          }
+
+          return this.storage.update(criteria, vo.data)
+            .catch(err =&gt; {
+              throw new Error(&apos;Manager.updateOne() error: &apos; + err.message);
+            })
+            .then( (affetcted) =&gt; {
+              return this.get(criteria)
+                .then(items =&gt; {
+                  return resolve(items[0]);
+                });
+            });
+        })
+        .catch(err =&gt; {
+          reject( err );
+        });
+    });
+  }
+
+  /**
+   * Delete a list of Vo in storage
+   * @param {Vo[]} Vo to delete
+   * @return {Promise&lt;boolean, Error&gt;} number of deleted item
+   * @access public
+   */
+  delete(vosArr) {
+    vosArr.forEach( vo =&gt; {
+      this.assumeIsOwnVoClass(vo);
+    });
+    return new Promise( (resolve, reject) =&gt; {
+      let ids = [];
+      vosArr.forEach( vo =&gt; {
+        ids.push(vo.id);
+      });
+
+      let criteria = { _id: { $in: ids}};
+      this.storage.delete(criteria)
+        .then(
+          deletedItemCount =&gt; {
+            resolve(deletedItemCount);
+          },
+          err =&gt; {
+            reject(err);
+          }
+        );
+    });
+  }
+
+  /**
+   * Delete a vo in storage
+   * @param {Vo} vo
+   * @return {Promise&lt;boolean, Error&gt;} number of deleted item
+   * @access public
+   */
+  deleteOne(vo) {
+    this.assumeIsOwnVoClass(vo);
+    return new Promise( (resolve, reject) =&gt; {
+      let criteria = { _id: vo.id };
+      this.storage.delete(criteria)
+        .then(
+          deletedItemCount =&gt; {
+            resolve(deletedItemCount===1);
+          },
+          err =&gt; {
+            reject(err);
+          }
+        );
+    });
+  }
+
+  /**
+   * Get a Vo from a unique property value
+   * @param {string} property
+   * @param {any} value - the unique property value to look for
+   * @return {Promise&lt;Vo, Error&gt;}
+   * @access public
+   */
+  getByUniqueProperty(property, value) {
+    return new Promise( (resolve, reject) =&gt; {
+      // Check property is a unique one
+      if(!this.constructor.validatorClass.isPropertyUnique(property)) {
+        return reject(new Error(&apos;The property &quot;&apos; + property + &apos;&quot; is not unique&apos;));
+      }
+
+      // @todo add cast to value
+      // value = this.constructor.voClass.castVoPropertyValue(property, value);
+
+      let criteria = {};
+      criteria[property] = value;
+
+      this.get(criteria)
+        .then( result =&gt; {
+          switch(result.length) {
+            case 0:
+              resolve(null);
+              break;
+            case 1:
+              resolve(result[0]);
+              break;
+            default:
+              reject(new Error(&apos;Got multiple object and must only get one&apos;));
+          }
+        }, err =&gt; {
+          reject(err);
+        });
+    });
+  }
+
+  /**
+   * Get a list of Vo from a unique property and many values
+   * @param {string} property
+   * @param {any[]} values - the unique property value to look for
+   * @return {Promise&lt;Vo[], Error&gt;}
+   * @access public
+   */
+  getByUniquePropertyM(property, values) {
+    return new Promise( (resolve, reject) =&gt; {
+      if(!this.constructor.validatorClass.isPropertyUnique(property)) {
+        return reject(new Error(&apos;The property &quot;&apos; + property + &apos;&quot; is not unique&apos;));
+      }
+
+      if(values.constructor!==Array) {
+        return reject(new Error(&apos;Values must be an array&apos;));
+      }
+
+      let criteria = {};
+      criteria[property] = { $in: values};
+      this.get(criteria)
+        .then( results =&gt; {
+          resolve(results);
+        }, err =&gt; {
+          reject(err);
+        });
+    });
+  }
+
+  /**
+   * Get a list of all error of a Vo
+   * @param {Vo} vo - the Vo to check
+   * @param {string[]} skipProperties - a list of properties not to check
+   * @return {Promise&lt;object, Error&gt;} - list of message errors (key: property, value: message)
+   * @access public
+   */
+  getAllVoErrors(vo, skipProperties= []) {
+    this.assumeIsOwnVoClass(vo);
+    return new Promise( (resolve, reject) =&gt; {
+      Promise.all( [this.getVoFormatErrors(vo), this.getVoUniqueErrors(vo), this.getVoBusinessErrors(vo)] )
+        .then(
+          errorsArrays =&gt; {
+            let errors = {};
+            errorsArrays.map( errorType =&gt; {
+              Object.keys(errorType).map( field =&gt; {
+                if(!errors[field] &amp;&amp; skipProperties.indexOf(field) &lt; 0) {
+                  errors[field] = errorType[field];
+                }
+              });
+            });
+            resolve(errors);
+          },
+          err =&gt; {
+            reject(err);
+          }
+        );
+    });
+
+  }
+
+  /**
+   * Get a list of the properties format error of a Vo
+   * @param {Vo} vo - the Vo to check
+   * @return {Promise&lt;object, Error&gt;} - list of message errors (key: property, value: message)
+   * @access public
+   */
+  getVoFormatErrors(vo) {
+    this.assumeIsOwnVoClass(vo);
+    return new Promise( (resolve) =&gt; {
+      let validator = new this.constructor.validatorClass(vo);
+      validator.validateVo();
+      resolve(validator.hasError() ? validator.errors : {});
+    });
+  }
+
+  /**
+   * Get a list of the unique properties error of a Vo
+   * @param {Vo} vo - the Vo to check
+   * @return {Promise&lt;object, Error&gt;} - list of message errors (key: property, value: message)
+   * @access public
+   */
+  getVoUniqueErrors(vo) {
+    this.assumeIsOwnVoClass(vo);
+    let result = {};
+    let promises = [];
+
+    this.constructor.validatorClass.uniques.forEach( property =&gt; {
+      let value = vo[property];
+
+      // Skip if empty and not required
+      if(this.constructor.validatorClass.needToCheckProperty(property, value)) {
+        let p = this.getByUniqueProperty(property, value)
+          .then ( foundVo =&gt; {
+            if(foundVo==null) {
+              return null;
+            }
+            if(!vo.id) {
+              return property;
+            }
+            if(String(vo.id)===String(foundVo.id)) {
+              return null;
+            }
+            return property;
+          });
+        promises.push(p);
+      }
+    });
+
+    if(promises.length === 0) {
+      return Promise.resolve({});
+    }
+
+    return Promise.all(promises)
+      .then( propertiesWithError =&gt; {
+        propertiesWithError.forEach( property =&gt; {
+          if(property) {
+            result[property] = &apos;unique&apos;;
+          }
+        });
+        return result;
+      });
+  }
+
+  /**
+   * Get a list of the  properties business errors of a Vo. To be override by business specific needs
+   * @param {Vo} vo - the Vo to check
+   * @return {Promise&lt;object, Error&gt;} - list of message errors (key: property, value: message)
+   * @access public
+   */
+  getVoBusinessErrors(vo) {
+    this.assumeIsOwnVoClass(vo);
+    return new Promise( (resolve) =&gt; {
+      return resolve({});
+    });
+  }
+
+  /**
+   * Get the list of Class available methods
+   *
+   * @return {String[]} - the list of the callable methods
+   * @access public
+   */
+  get availableMethods() {
+    let OwnMethods = Object.getOwnPropertyNames(Manager.prototype);
+    let childMethods = Object.getOwnPropertyNames(this.__proto__);
+
+    let methods = childMethods;
+    OwnMethods.forEach( method =&gt; {
+      if(methods.indexOf(method) &lt; 0) {
+        methods.push(method);
+      }
+    });
+    return methods;
+  }
+}
+
+
+Manager.init = function(ManagerChild, VoClass, ValidatorClass) {
+
+  Object.defineProperty(ManagerChild, &apos;voClass&apos;, {
+    enumerable: false,
+    writable: false,
+    configurable: false,
+    value: VoClass
+  });
+
+  Object.defineProperty(ManagerChild, &apos;validatorClass&apos;, {
+    enumerable: false,
+    writable: false,
+    configurable: false,
+    value: ValidatorClass
+  });
+
+  VoClass.getPropertiesNames().forEach( property =&gt; {
+    if(ValidatorClass.isPropertyUnique(property)) {
+      let cleanProperty = property.replace(/([^a-z0-9])/ig, &apos;&apos;);
+      let methodName = &apos;getOneBy&apos; + cleanProperty.charAt(0).toUpperCase() + cleanProperty.substr(1).toLowerCase();
+      Object.defineProperty(ManagerChild.prototype, methodName, {
+        enumerable: false,
+        writable: false,
+        configurable: false,
+        value: function(value) {
+          return this.getByUniqueProperty(property, value);
+        }
+      });
+    }
+  });
+};
+</code></pre>
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.2.1)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

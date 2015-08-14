@@ -10,6 +10,7 @@
 [c]lean   : remove all the generated files
 [b]uild   : generate all the files
 [w]atch   : start the server and watch changing files
+esdoc     : generate the documentation
 
 ## Quick shortcuts
 cb  : clean build

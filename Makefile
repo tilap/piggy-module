@@ -18,6 +18,9 @@ w: watch
 watch:
 	$(BIN)/gulp watch
 
+esdoc:
+	$(BIN)/esdoc -c esdoc.json
+
 cb: clean build
 bw: build watch
 cbw: clean build watch

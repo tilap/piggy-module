@@ -1,0 +1,3948 @@
+[
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Errors.js",
+    "memberof": null,
+    "longname": "src/Errors.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 4,
+    "content": "/**\n * Custom error. Works as standard Error with a different name to make difference\n */\nexport default class ModuleError {\n  /**\n   * @param {String} message - the error message\n   */\n  constructor (message) {\n    if (Error.hasOwnProperty('captureStackTrace')) {\n      Error.captureStackTrace(this, this.constructor);\n    }\n    else {\n      Object.defineProperty(this, 'stack', {\n        value: (new Error()).stack\n      });\n    }\n\n    Object.defineProperty(this, 'message', {\n      value: message\n    });\n  }\n\n  /**\n   * @return - the error constructor name\n   */\n  get name () {\n    return this.constructor.name;\n  }\n}\n\nexport class StorageError extends ModuleError {}\nexport class ValidatorError extends ModuleError {}\nexport class VoError extends ModuleError {}\n"
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "ModuleError",
+    "memberof": "src/Errors.js",
+    "longname": "src/Errors.js~ModuleError",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Errors.js",
+    "importStyle": "ModuleError",
+    "description": "Custom error. Works as standard Error with a different name to make difference",
+    "lineNumber": 4,
+    "interface": false
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Errors.js~ModuleError",
+    "longname": "src/Errors.js~ModuleError#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 8,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "message",
+        "description": "the error message"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "name",
+    "memberof": "src/Errors.js~ModuleError",
+    "longname": "src/Errors.js~ModuleError#name",
+    "access": null,
+    "description": null,
+    "lineNumber": 26,
+    "return": {
+      "nullable": null,
+      "types": [
+        "*"
+      ],
+      "spread": false,
+      "description": "the error constructor name"
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "StorageError",
+    "memberof": "src/Errors.js",
+    "longname": "src/Errors.js~StorageError",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Errors.js",
+    "importStyle": "{StorageError}",
+    "description": null,
+    "lineNumber": 31,
+    "undocument": true,
+    "interface": false,
+    "extends": [
+      "ModuleError"
+    ]
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "ValidatorError",
+    "memberof": "src/Errors.js",
+    "longname": "src/Errors.js~ValidatorError",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Errors.js",
+    "importStyle": "{ValidatorError}",
+    "description": null,
+    "lineNumber": 32,
+    "undocument": true,
+    "interface": false,
+    "extends": [
+      "ModuleError"
+    ]
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "VoError",
+    "memberof": "src/Errors.js",
+    "longname": "src/Errors.js~VoError",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Errors.js",
+    "importStyle": "{VoError}",
+    "description": null,
+    "lineNumber": 33,
+    "undocument": true,
+    "interface": false,
+    "extends": [
+      "ModuleError"
+    ]
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Manager.js",
+    "memberof": null,
+    "longname": "src/Manager.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 4,
+    "content": "/**\n * Manage Vo items, sending and getting them to the Storage\n */\nexport default class Manager {\n\n  constructor(storage) {\n    /** @type {Storage} - an instance storage*/\n    this.storage = storage;\n  }\n\n  /**\n   * Make sure an object has the current Manager Vo class\n   *\n   * @param {Vo} vo\n   * @throw {Error}\n   */\n  assumeIsOwnVoClass(vo) {\n    if(vo.constructor.name !== this.constructor.voClass.name) {\n      throw new Error('Manager.assumeIsOwnVoClass() error: ' + this.constructor.voClass.name + ' expected class instace');\n    }\n  }\n\n  /**\n   * Get a new Vo, and fill it with data if any\n   *\n   * @param {?object} data\n   * @return {Vo}\n   */\n  getNewVo(data={}) {\n    return new this.constructor.voClass(data);\n  }\n\n  /**\n   * Get a list of Vo\n   *\n   * @param {Object} criteria - mongodb-like criteria style\n   * @param {Object} options - mongodb-like options style\n   * @return {Promise<Vo[], Error>}\n   * @access public\n   */\n  get(criteria={}, options={}) {\n    return this.storage.get(criteria, options)\n      .catch( err => {\n        throw new Error('Manager.get() error: ' + err.message);\n      })\n      .then( items => {\n        let res = [];\n        items.map( item => {\n          res.push(this.getNewVo(item));\n        });\n        return res;\n      })\n      .catch( err => {\n        throw new Error('Manager.get() error#2: ' + err.message);\n      });\n  }\n\n  /**\n   * Get a paginated list of Vo\n   *\n   * @param {Object} criteria - mongodb-like criteria style\n   * @param {integer} page - the page to retrieve\n   * @param {integer} limit - number of item per page\n   * @param {string} orderby - a Vo property to order by\n   * @param {string} order - 'asc' or 'desc'\n   * @return {Promise<Vo[], Error>}\n   * @access public\n   */\n  getByPage(criteria, page=1, limit=15, orderby='id', order=1) {\n    return this.storage.getgetByPage(criteria, page, limit, orderby, order);\n  }\n\n  /**\n   * Save a vo in storage, update if exists, or insert\n   * @param {Vo} vo\n   * @return {Promise<Vo[], Error>}\n   * @access public\n   */\n  saveOne(vo) {\n    return vo.id ? this.updateOne(vo) : this.insertOne(vo);\n  }\n\n  /**\n   * Insert a vo in storage\n   * @param {Vo} vo\n   * @return {Promise<Vo[], Error>}\n   * @access public\n   */\n  insertOne(vo) {\n    this.assumeIsOwnVoClass(vo);\n    return new Promise( (resolve, reject) => {\n      this.getAllVoErrors(vo)\n        .then( errors => {\n          if(Object.keys(errors).length > 0) {\n            return reject(errors);\n          }\n          const data = [vo.data];\n          this.storage.insert(data)\n            .catch(err => {\n              throw new Error('Manager.insertOne() error: ' + err.message);\n            })\n            .then(newItemsData => {\n              if(newItemsData.constructor !== Array || newItemsData.length!==1) {\n                return resolve(null);\n              }\n              resolve(this.getNewVo(newItemsData[0]));\n            });\n        })\n        .catch(err => {\n          reject( new Error(err.message) );\n        });\n    });\n  }\n\n  /**\n   * Update a vo in storage\n   * @param {Vo} vo\n   * @return {Promise<Vo[], Error>}\n   * @access public\n   */\n  updateOne(vo) {\n    this.assumeIsOwnVoClass(vo);\n    let criteria = {_id: vo.id};\n    return new Promise( (resolve, reject) => {\n      this.getAllVoErrors(vo)\n        .then( errors => {\n          if(Object.keys(errors).length > 0) {\n            return reject(errors);\n          }\n\n          return this.storage.update(criteria, vo.data)\n            .catch(err => {\n              throw new Error('Manager.updateOne() error: ' + err.message);\n            })\n            .then( (affetcted) => {\n              return this.get(criteria)\n                .then(items => {\n                  return resolve(items[0]);\n                });\n            });\n        })\n        .catch(err => {\n          reject( err );\n        });\n    });\n  }\n\n  /**\n   * Delete a list of Vo in storage\n   * @param {Vo[]} Vo to delete\n   * @return {Promise<boolean, Error>} number of deleted item\n   * @access public\n   */\n  delete(vosArr) {\n    vosArr.forEach( vo => {\n      this.assumeIsOwnVoClass(vo);\n    });\n    return new Promise( (resolve, reject) => {\n      let ids = [];\n      vosArr.forEach( vo => {\n        ids.push(vo.id);\n      });\n\n      let criteria = { _id: { $in: ids}};\n      this.storage.delete(criteria)\n        .then(\n          deletedItemCount => {\n            resolve(deletedItemCount);\n          },\n          err => {\n            reject(err);\n          }\n        );\n    });\n  }\n\n  /**\n   * Delete a vo in storage\n   * @param {Vo} vo\n   * @return {Promise<boolean, Error>} number of deleted item\n   * @access public\n   */\n  deleteOne(vo) {\n    this.assumeIsOwnVoClass(vo);\n    return new Promise( (resolve, reject) => {\n      let criteria = { _id: vo.id };\n      this.storage.delete(criteria)\n        .then(\n          deletedItemCount => {\n            resolve(deletedItemCount===1);\n          },\n          err => {\n            reject(err);\n          }\n        );\n    });\n  }\n\n  /**\n   * Get a Vo from a unique property value\n   * @param {string} property\n   * @param {any} value - the unique property value to look for\n   * @return {Promise<Vo, Error>}\n   * @access public\n   */\n  getByUniqueProperty(property, value) {\n    return new Promise( (resolve, reject) => {\n      // Check property is a unique one\n      if(!this.constructor.validatorClass.isPropertyUnique(property)) {\n        return reject(new Error('The property \"' + property + '\" is not unique'));\n      }\n\n      // @todo add cast to value\n      // value = this.constructor.voClass.castVoPropertyValue(property, value);\n\n      let criteria = {};\n      criteria[property] = value;\n\n      this.get(criteria)\n        .then( result => {\n          switch(result.length) {\n            case 0:\n              resolve(null);\n              break;\n            case 1:\n              resolve(result[0]);\n              break;\n            default:\n              reject(new Error('Got multiple object and must only get one'));\n          }\n        }, err => {\n          reject(err);\n        });\n    });\n  }\n\n  /**\n   * Get a list of Vo from a unique property and many values\n   * @param {string} property\n   * @param {any[]} values - the unique property value to look for\n   * @return {Promise<Vo[], Error>}\n   * @access public\n   */\n  getByUniquePropertyM(property, values) {\n    return new Promise( (resolve, reject) => {\n      if(!this.constructor.validatorClass.isPropertyUnique(property)) {\n        return reject(new Error('The property \"' + property + '\" is not unique'));\n      }\n\n      if(values.constructor!==Array) {\n        return reject(new Error('Values must be an array'));\n      }\n\n      let criteria = {};\n      criteria[property] = { $in: values};\n      this.get(criteria)\n        .then( results => {\n          resolve(results);\n        }, err => {\n          reject(err);\n        });\n    });\n  }\n\n  /**\n   * Get a list of all error of a Vo\n   * @param {Vo} vo - the Vo to check\n   * @param {string[]} skipProperties - a list of properties not to check\n   * @return {Promise<object, Error>} - list of message errors (key: property, value: message)\n   * @access public\n   */\n  getAllVoErrors(vo, skipProperties= []) {\n    this.assumeIsOwnVoClass(vo);\n    return new Promise( (resolve, reject) => {\n      Promise.all( [this.getVoFormatErrors(vo), this.getVoUniqueErrors(vo), this.getVoBusinessErrors(vo)] )\n        .then(\n          errorsArrays => {\n            let errors = {};\n            errorsArrays.map( errorType => {\n              Object.keys(errorType).map( field => {\n                if(!errors[field] && skipProperties.indexOf(field) < 0) {\n                  errors[field] = errorType[field];\n                }\n              });\n            });\n            resolve(errors);\n          },\n          err => {\n            reject(err);\n          }\n        );\n    });\n\n  }\n\n  /**\n   * Get a list of the properties format error of a Vo\n   * @param {Vo} vo - the Vo to check\n   * @return {Promise<object, Error>} - list of message errors (key: property, value: message)\n   * @access public\n   */\n  getVoFormatErrors(vo) {\n    this.assumeIsOwnVoClass(vo);\n    return new Promise( (resolve) => {\n      let validator = new this.constructor.validatorClass(vo);\n      validator.validateVo();\n      resolve(validator.hasError() ? validator.errors : {});\n    });\n  }\n\n  /**\n   * Get a list of the unique properties error of a Vo\n   * @param {Vo} vo - the Vo to check\n   * @return {Promise<object, Error>} - list of message errors (key: property, value: message)\n   * @access public\n   */\n  getVoUniqueErrors(vo) {\n    this.assumeIsOwnVoClass(vo);\n    let result = {};\n    let promises = [];\n\n    this.constructor.validatorClass.uniques.forEach( property => {\n      let value = vo[property];\n\n      // Skip if empty and not required\n      if(this.constructor.validatorClass.needToCheckProperty(property, value)) {\n        let p = this.getByUniqueProperty(property, value)\n          .then ( foundVo => {\n            if(foundVo==null) {\n              return null;\n            }\n            if(!vo.id) {\n              return property;\n            }\n            if(String(vo.id)===String(foundVo.id)) {\n              return null;\n            }\n            return property;\n          });\n        promises.push(p);\n      }\n    });\n\n    if(promises.length === 0) {\n      return Promise.resolve({});\n    }\n\n    return Promise.all(promises)\n      .then( propertiesWithError => {\n        propertiesWithError.forEach( property => {\n          if(property) {\n            result[property] = 'unique';\n          }\n        });\n        return result;\n      });\n  }\n\n  /**\n   * Get a list of the  properties business errors of a Vo. To be override by business specific needs\n   * @param {Vo} vo - the Vo to check\n   * @return {Promise<object, Error>} - list of message errors (key: property, value: message)\n   * @access public\n   */\n  getVoBusinessErrors(vo) {\n    this.assumeIsOwnVoClass(vo);\n    return new Promise( (resolve) => {\n      return resolve({});\n    });\n  }\n\n  /**\n   * Get the list of Class available methods\n   *\n   * @return {String[]} - the list of the callable methods\n   * @access public\n   */\n  get availableMethods() {\n    let OwnMethods = Object.getOwnPropertyNames(Manager.prototype);\n    let childMethods = Object.getOwnPropertyNames(this.__proto__);\n\n    let methods = childMethods;\n    OwnMethods.forEach( method => {\n      if(methods.indexOf(method) < 0) {\n        methods.push(method);\n      }\n    });\n    return methods;\n  }\n}\n\n\nManager.init = function(ManagerChild, VoClass, ValidatorClass) {\n\n  Object.defineProperty(ManagerChild, 'voClass', {\n    enumerable: false,\n    writable: false,\n    configurable: false,\n    value: VoClass\n  });\n\n  Object.defineProperty(ManagerChild, 'validatorClass', {\n    enumerable: false,\n    writable: false,\n    configurable: false,\n    value: ValidatorClass\n  });\n\n  VoClass.getPropertiesNames().forEach( property => {\n    if(ValidatorClass.isPropertyUnique(property)) {\n      let cleanProperty = property.replace(/([^a-z0-9])/ig, '');\n      let methodName = 'getOneBy' + cleanProperty.charAt(0).toUpperCase() + cleanProperty.substr(1).toLowerCase();\n      Object.defineProperty(ManagerChild.prototype, methodName, {\n        enumerable: false,\n        writable: false,\n        configurable: false,\n        value: function(value) {\n          return this.getByUniqueProperty(property, value);\n        }\n      });\n    }\n  });\n};\n"
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Manager",
+    "memberof": "src/Manager.js",
+    "longname": "src/Manager.js~Manager",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Manager.js",
+    "importStyle": "Manager",
+    "description": "Manage Vo items, sending and getting them to the Storage",
+    "lineNumber": 4,
+    "interface": false
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 6,
+    "undocument": true,
+    "params": [
+      {
+        "name": "storage",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "storage",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#storage",
+    "access": null,
+    "description": null,
+    "lineNumber": 8,
+    "type": {
+      "nullable": null,
+      "types": [
+        "Storage"
+      ],
+      "spread": false,
+      "description": null
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "assumeIsOwnVoClass",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#assumeIsOwnVoClass",
+    "access": null,
+    "description": "Make sure an object has the current Manager Vo class",
+    "lineNumber": 17,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{Error}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": ""
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getNewVo",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#getNewVo",
+    "access": null,
+    "description": "Get a new Vo, and fill it with data if any",
+    "lineNumber": 29,
+    "params": [
+      {
+        "nullable": true,
+        "types": [
+          "object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "data",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Vo"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "get",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#get",
+    "access": "public",
+    "description": "Get a list of Vo",
+    "lineNumber": 41,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "mongodb-like criteria style"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": "mongodb-like options style"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getByPage",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#getByPage",
+    "access": "public",
+    "description": "Get a paginated list of Vo",
+    "lineNumber": 69,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "mongodb-like criteria style"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "integer"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "page",
+        "description": "the page to retrieve"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "integer"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "limit",
+        "description": "number of item per page"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "orderby",
+        "description": "a Vo property to order by"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "order",
+        "description": "'asc' or 'desc'"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "saveOne",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#saveOne",
+    "access": "public",
+    "description": "Save a vo in storage, update if exists, or insert",
+    "lineNumber": 79,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "insertOne",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#insertOne",
+    "access": "public",
+    "description": "Insert a vo in storage",
+    "lineNumber": 89,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "updateOne",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#updateOne",
+    "access": "public",
+    "description": "Update a vo in storage",
+    "lineNumber": 121,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "delete",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#delete",
+    "access": "public",
+    "description": "Delete a list of Vo in storage",
+    "lineNumber": 154,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo[]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "Vo",
+        "description": "to delete"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<boolean, Error>"
+      ],
+      "spread": false,
+      "description": "number of deleted item"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "deleteOne",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#deleteOne",
+    "access": "public",
+    "description": "Delete a vo in storage",
+    "lineNumber": 183,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<boolean, Error>"
+      ],
+      "spread": false,
+      "description": "number of deleted item"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getByUniqueProperty",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#getByUniqueProperty",
+    "access": "public",
+    "description": "Get a Vo from a unique property value",
+    "lineNumber": 206,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": "the unique property value to look for"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo, Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getByUniquePropertyM",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#getByUniquePropertyM",
+    "access": "public",
+    "description": "Get a list of Vo from a unique property and many values",
+    "lineNumber": 244,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": ""
+      },
+      {
+        "nullable": null,
+        "types": [
+          "any[]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "values",
+        "description": "the unique property value to look for"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getAllVoErrors",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#getAllVoErrors",
+    "access": "public",
+    "description": "Get a list of all error of a Vo",
+    "lineNumber": 272,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": "the Vo to check"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string[]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "skipProperties",
+        "description": "a list of properties not to check"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<object, Error>"
+      ],
+      "spread": false,
+      "description": "list of message errors (key: property, value: message)"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getVoFormatErrors",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#getVoFormatErrors",
+    "access": "public",
+    "description": "Get a list of the properties format error of a Vo",
+    "lineNumber": 302,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": "the Vo to check"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<object, Error>"
+      ],
+      "spread": false,
+      "description": "list of message errors (key: property, value: message)"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getVoUniqueErrors",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#getVoUniqueErrors",
+    "access": "public",
+    "description": "Get a list of the unique properties error of a Vo",
+    "lineNumber": 317,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": "the Vo to check"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<object, Error>"
+      ],
+      "spread": false,
+      "description": "list of message errors (key: property, value: message)"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getVoBusinessErrors",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#getVoBusinessErrors",
+    "access": "public",
+    "description": "Get a list of the  properties business errors of a Vo. To be override by business specific needs",
+    "lineNumber": 365,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": "the Vo to check"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<object, Error>"
+      ],
+      "spread": false,
+      "description": "list of message errors (key: property, value: message)"
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "availableMethods",
+    "memberof": "src/Manager.js~Manager",
+    "longname": "src/Manager.js~Manager#availableMethods",
+    "access": "public",
+    "description": "Get the list of Class available methods",
+    "lineNumber": 378,
+    "return": {
+      "nullable": null,
+      "types": [
+        "String[]"
+      ],
+      "spread": false,
+      "description": "the list of the callable methods"
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "init",
+    "memberof": "src/Manager.js",
+    "longname": "src/Manager.js~init",
+    "access": null,
+    "export": false,
+    "importPath": "piggy-module/src/Manager.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 393,
+    "undocument": true,
+    "params": [
+      {
+        "name": "ManagerChild",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "VoClass",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "ValidatorClass",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Service.js",
+    "memberof": null,
+    "longname": "src/Service.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 4,
+    "content": "/**\n * Execute any business request from business data. Mostly output Vo\n */\nexport default class Service {\n\n  /**\n   * @param {Manager} manager - manager a manager instance\n   */\n  constructor(manager) {\n    /**\n     * @type {Manager}\n     * @private\n     */\n    this._manager = manager;\n\n    /**\n     * @type {object}\n     * @private\n     */\n    this._context = {};\n  }\n\n  /**\n   * Store a context\n   *\n   * @param {string} key - the context key\n   * @param {?(number|string|Array|object)} value - the context value\n   * @return {self}\n   * @access public\n   */\n  setContext(key, value) {\n    this._context[key]=value;\n    return this;\n  }\n\n  /**\n   * Store and override all context\n   *\n   * @param {object} context - the context key\n   * @return {self}\n   * @access public\n   */\n  setFullContext(context) {\n    this._context = context;\n    return this;\n  }\n\n  /**\n   * Create a Vo from a data object\n   *\n   * @param {object} data -\n   * @return {Promise<Vo, Error>} - new Vo\n   * @access public\n   */\n  createOneFromData(data={}) {\n    let vo = this._manager.getNewVo(data);\n    return new Promise((resolve, reject) => {\n      this._manager.saveOne(vo)\n        .catch(err => {\n          return reject(err);\n        })\n        .then(vo => {\n          return resolve(vo);\n        });\n    });\n  }\n\n  /**\n   * Get a list of Vo\n   *\n   * @param {Object} criteria - mongodb-like criteria style\n   * @param {Object} options - mongodb-like options style\n   * @return {Promise<Vo[], Error>}\n   * @access public\n   */\n  get(criteria={}, options={}) {\n    return this._manager.get(criteria, options);\n  }\n\n  /**\n   * Get a paginated list of Vo\n   *\n   * @param {Object} criteria - mongodb-like criteria style\n   * @param {integer} page - the page to retrieve\n   * @param {integer} limit - number of item per page\n   * @param {string} orderby - a Vo property to order by\n   * @param {string} order - 'asc' or 'desc'\n   * @return {Promise<Vo[], Error>}\n   * @access public\n   */\n  getByPage(criteria, page=1, limit=15, orderby='id', order='asc') {\n    page = page > 0 ? page : 1;\n    order = (order==='desc' || order===false || order===-1 || order==='-1') ? 'desc' : 'asc';\n    let options = {};\n    options.limit = limit;\n    options.skip = (page-1) * limit;\n    options.sort = [[orderby, order]];\n    return this.get(criteria, options);\n  }\n\n  /**\n   * Get a Vo from its Id\n   *\n   * @param {string} id - the id of the Vo\n   * @return {Promise<Vo, Error>}\n   * @access public\n   */\n  getOneById(id) {\n    return this._manager.getOneById(id);\n  }\n\n  /**\n   * Update a Vo properties from a dataset\n   *\n   * @param {Object} data - a data object\n   * @return {Promise<Vo, Error>} - the updated Vo\n   * @access public\n   */\n  updateOneFromData(data, id) {\n    return new Promise((resolve, reject) => {\n      this.getOneById(id).then( vo => {\n        if(null===vo) {\n          return reject ('not found');\n        }\n        vo.setData(data);\n        return vo;\n      })\n      .then( vo => {\n        this._manager.saveOne(vo).then( vo => {\n          return resolve(vo);\n        })\n        .catch(err => {\n          return reject(err);\n        });\n      });\n    });\n  }\n\n  /**\n   * Delete a Vo from its id\n   *\n   * @param {string} id - the id of the Vo\n   * @return {Promise<boolean, Error>} - true if success, false if error, null if nothing to delete\n   * @access public\n   */\n  deleteOneById(id) {\n    return new Promise((resolve, reject) => {\n      this.getOneById(id).then( vo => {\n        if(null===vo) {\n          return resolve(null);\n        }\n        this._manager.deleteOne(vo).then( success => {\n          return resolve(success===true);\n        });\n      });\n    });\n  }\n\n  /**\n   * Get the list of Class available methods\n   *\n   * @return {String[]} - the list of the callable methods\n   * @access public\n   */\n  get availableMethods() {\n    let childMethods = Object.getOwnPropertyNames(this.__proto__);\n    let OwnMethods = Object.getOwnPropertyNames(Service.prototype);\n\n    let methods = childMethods;\n    OwnMethods.forEach( method => {\n      if(methods.indexOf(method) < 0) {\n        methods.push(method);\n      }\n    });\n    return methods;\n  }\n}\n"
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Service",
+    "memberof": "src/Service.js",
+    "longname": "src/Service.js~Service",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Service.js",
+    "importStyle": "Service",
+    "description": "Execute any business request from business data. Mostly output Vo",
+    "lineNumber": 4,
+    "interface": false
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 9,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Manager"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "manager",
+        "description": "manager a manager instance"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "_manager",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#_manager",
+    "access": "private",
+    "description": null,
+    "lineNumber": 14,
+    "type": {
+      "nullable": null,
+      "types": [
+        "Manager"
+      ],
+      "spread": false,
+      "description": null
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "_context",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#_context",
+    "access": "private",
+    "description": null,
+    "lineNumber": 20,
+    "type": {
+      "nullable": null,
+      "types": [
+        "object"
+      ],
+      "spread": false,
+      "description": null
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "setContext",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#setContext",
+    "access": "public",
+    "description": "Store a context",
+    "lineNumber": 31,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": "the context key"
+      },
+      {
+        "nullable": true,
+        "types": [
+          "number",
+          "string",
+          "Array",
+          "object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": "the context value"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "self"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "setFullContext",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#setFullContext",
+    "access": "public",
+    "description": "Store and override all context",
+    "lineNumber": 43,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "context",
+        "description": "the context key"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "self"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "_context",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#_context",
+    "access": null,
+    "description": null,
+    "lineNumber": 44,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "createOneFromData",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#createOneFromData",
+    "access": "public",
+    "description": "Create a Vo from a data object",
+    "lineNumber": 55,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "data",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo, Error>"
+      ],
+      "spread": false,
+      "description": "new Vo"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "get",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#get",
+    "access": "public",
+    "description": "Get a list of Vo",
+    "lineNumber": 76,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "mongodb-like criteria style"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": "mongodb-like options style"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getByPage",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#getByPage",
+    "access": "public",
+    "description": "Get a paginated list of Vo",
+    "lineNumber": 91,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "mongodb-like criteria style"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "integer"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "page",
+        "description": "the page to retrieve"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "integer"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "limit",
+        "description": "number of item per page"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "orderby",
+        "description": "a Vo property to order by"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "order",
+        "description": "'asc' or 'desc'"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getOneById",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#getOneById",
+    "access": "public",
+    "description": "Get a Vo from its Id",
+    "lineNumber": 108,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "id",
+        "description": "the id of the Vo"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo, Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "updateOneFromData",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#updateOneFromData",
+    "access": "public",
+    "description": "Update a Vo properties from a dataset",
+    "lineNumber": 119,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "data",
+        "description": "a data object"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Vo, Error>"
+      ],
+      "spread": false,
+      "description": "the updated Vo"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "deleteOneById",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#deleteOneById",
+    "access": "public",
+    "description": "Delete a Vo from its id",
+    "lineNumber": 146,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "id",
+        "description": "the id of the Vo"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<boolean, Error>"
+      ],
+      "spread": false,
+      "description": "true if success, false if error, null if nothing to delete"
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "availableMethods",
+    "memberof": "src/Service.js~Service",
+    "longname": "src/Service.js~Service#availableMethods",
+    "access": "public",
+    "description": "Get the list of Class available methods",
+    "lineNumber": 165,
+    "return": {
+      "nullable": null,
+      "types": [
+        "String[]"
+      ],
+      "spread": false,
+      "description": "the list of the callable methods"
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Storage/Abstract.js",
+    "memberof": null,
+    "longname": "src/Storage/Abstract.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import { StorageError } from './../Errors';\n\n/**\n * Abstract storage for Vo.\n * Any method here must be implemented. If not, will throw a StorageError\n */\nexport default class AbstractStorage {\n  /**\n   * @param {?Object|Array|String} collection - the sotorage collection\n   */\n  constructor(collection=null) {\n    /**\n     * @type {?Object|Array|String}\n     * @private\n     */\n    this._collection = collection;\n  }\n\n  /** @type {?Object|Array|String} */\n  get collection() {\n    return this._collection;\n  }\n\n  /**\n   * Get a list of data Object from criteria and options\n   *\n   * @param {Object} criteria - mongodb criteria style\n   * @param {Object} options - mongodb options style\n   * @return {Promise<Object[], Error>}\n   * @access public\n   * @abstract\n   */\n  get(criteria, options) {\n    throw new StorageError('Method not set up');\n  }\n\n  /**\n   * Insert many data Object in storage\n   *\n   * @param [Object[]] dataArray - a list of data Object\n   * @return {Promise<Object[], Error>} - inserted data Object list\n   * @access public\n   * @abstract\n   */\n  insert(voData) {\n    throw new StorageError('Method not set up');\n  }\n\n  /**\n   * Update collection from criteria\n   *\n   * @param {Object} criteria - MongoDb criteria Object\n   * @param {Object} newValues - key-value Object with new data\n   * @param {Object} options - Storage option\n   * @return {Promise<integer, Error>} - number of updated items\n   * @access public\n   * @abstract\n   */\n  update(criteria={}, newValues={}, options={}) {\n    throw new StorageError('Method not set up');\n  }\n\n  /**\n   * Delete collection Object from criteria\n   *\n   * @param {Object} criteria - MongoDb criteria Object\n   * @return {Promise<integer, Error>} - number of deleted items\n   * @access public\n   * @abstract\n   */\n  delete(criteria) {\n    throw new StorageError('Method not set up');\n  }\n}\n"
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "AbstractStorage",
+    "memberof": "src/Storage/Abstract.js",
+    "longname": "src/Storage/Abstract.js~AbstractStorage",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Storage/Abstract.js",
+    "importStyle": "AbstractStorage",
+    "description": "Abstract storage for Vo.\nAny method here must be implemented. If not, will throw a StorageError",
+    "lineNumber": 7,
+    "interface": false
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Storage/Abstract.js~AbstractStorage",
+    "longname": "src/Storage/Abstract.js~AbstractStorage#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 11,
+    "params": [
+      {
+        "nullable": true,
+        "types": [
+          "Object",
+          "Array",
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "collection",
+        "description": "the sotorage collection"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "_collection",
+    "memberof": "src/Storage/Abstract.js~AbstractStorage",
+    "longname": "src/Storage/Abstract.js~AbstractStorage#_collection",
+    "access": "private",
+    "description": null,
+    "lineNumber": 16,
+    "type": {
+      "nullable": true,
+      "types": [
+        "Object",
+        "Array",
+        "String"
+      ],
+      "spread": false,
+      "description": null
+    }
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "collection",
+    "memberof": "src/Storage/Abstract.js~AbstractStorage",
+    "longname": "src/Storage/Abstract.js~AbstractStorage#collection",
+    "access": null,
+    "description": null,
+    "lineNumber": 20,
+    "type": {
+      "nullable": true,
+      "types": [
+        "Object",
+        "Array",
+        "String"
+      ],
+      "spread": false,
+      "description": null
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "get",
+    "memberof": "src/Storage/Abstract.js~AbstractStorage",
+    "longname": "src/Storage/Abstract.js~AbstractStorage#get",
+    "access": "public",
+    "description": "Get a list of data Object from criteria and options",
+    "lineNumber": 33,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "mongodb criteria style"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": "mongodb options style"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Object[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "abstract": true,
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "insert",
+    "memberof": "src/Storage/Abstract.js~AbstractStorage",
+    "longname": "src/Storage/Abstract.js~AbstractStorage#insert",
+    "access": "public",
+    "description": "Insert many data Object in storage",
+    "lineNumber": 45,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "*"
+        ],
+        "spread": false,
+        "optional": true,
+        "name": "Object[]",
+        "description": "dataArray - a list of data Object"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Object[], Error>"
+      ],
+      "spread": false,
+      "description": "inserted data Object list"
+    },
+    "abstract": true,
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "update",
+    "memberof": "src/Storage/Abstract.js~AbstractStorage",
+    "longname": "src/Storage/Abstract.js~AbstractStorage#update",
+    "access": "public",
+    "description": "Update collection from criteria",
+    "lineNumber": 59,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "MongoDb criteria Object"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "newValues",
+        "description": "key-value Object with new data"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": "Storage option"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<integer, Error>"
+      ],
+      "spread": false,
+      "description": "number of updated items"
+    },
+    "abstract": true,
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "delete",
+    "memberof": "src/Storage/Abstract.js~AbstractStorage",
+    "longname": "src/Storage/Abstract.js~AbstractStorage#delete",
+    "access": "public",
+    "description": "Delete collection Object from criteria",
+    "lineNumber": 71,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "MongoDb criteria Object"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<integer, Error>"
+      ],
+      "spread": false,
+      "description": "number of deleted items"
+    },
+    "abstract": true,
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Storage/Db.js",
+    "memberof": null,
+    "longname": "src/Storage/Db.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import AbstractStorage from './Abstract';\nimport { ObjectId } from 'mongodb';\n\n/**\n * Manage data from a mongodb collection.\n */\nexport default class Storage extends AbstractStorage{\n\n  /**\n   * @param {Object} collection - A mongodb collection\n   */\n  constructor(collection) {\n    super(collection);\n  }\n\n  /**\n   * Get a list of data Object from criteria and options\n   *\n   * @param {Object} criteria - mongodb criteria style\n   * @param {Object} options - mongodb options style\n   * @return {Promise<Object[], Error>}\n   * @access public\n   * @override\n   */\n  get(criteria = {}, options= {}) {\n    criteria = this._prepareCriteria(criteria);\n    return new Promise( (resolve, reject) => {\n      this.collection\n        .find(criteria, options)\n        .toArray( (err, items) => {\n          if(err) {\n            return reject( new Error('Storage error in get()'));\n          }\n          resolve(items);\n        });\n    });\n  }\n\n  /**\n   * Get a paginated list of data Object\n   *\n   * @param {Object} criteria - mongodb criteria style\n   * @param {integer} page - the page to retrieve\n   * @param {integer} limit - number of item per page\n   * @param {string} orderby - a mongodb collection property to order the list result\n   * @param {string} order - 'asc' or 'desc'\n   * @return {Promise<Object[], Error>}\n   * @access public\n   */\n  getByPage(criteria, page=1, limit=15, orderby='id', order='asc') {\n    page = page > 0  || 1;\n    let options = {};\n    options.limit = limit;\n    options.skip = (page-1) * limit;\n    options.sort = [[ orderby, order ? 'asc' : 'desc']];\n    return this.get(criteria, options);\n  }\n\n  /**\n   * Insert many data Object in database\n   *\n   * @param {Object[]} dataArray - a list of data Object\n   * @return {Promise<Object[], Error>} - inserted data Object list\n   * @access public\n   * @override\n   */\n  insert(dataArray) {\n    if(dataArray.constructor !== Array ) {\n      throw new Error('DB insert: Expected array');\n    }\n\n    return new Promise( (resolve, reject) => {\n      this.collection.insert(dataArray, (err, insertResult) => {\n        if(err) {\n          return reject( new Error ('Storage error: insert() ' + err.message) );\n        }\n        let insertedDatas = insertResult.ops;\n        resolve(insertedDatas);\n      });\n    });\n  }\n\n  /**\n   * Update collection from criteria\n   *\n   * @param {Object} criteria - MongoDb criteria Object\n   * @param {Object} newValues - key-value Object with new data\n   * @param {Object} options - MongoDb options\n   * @param {boolean} options.upsert - insert if not exists\n   * @param {boolean} options.multi - update multi Object enabled\n   * @return {Promise<integer, Error>} - number of updated items\n   * @access public\n   * @override\n   */\n  update(criteria, newValues, options={upsert: false, multi: true}) {\n    criteria = this._prepareCriteria(criteria);\n    newValues = this._stripIdCriteria(newValues);\n    return new Promise( (resolve, reject) => {\n      this.collection.update(criteria, { $set: newValues}, options, (err, updateResult) => {\n        if(err) {\n          return reject(new Error('Storage error: update() ' + err.message));\n        }\n        resolve(updateResult.result.n);\n      });\n    });\n  }\n\n  /**\n   * Delete collection Object from criteria\n   *\n   * @param {Object} criteria - MongoDb criteria Object\n   * @return {Promise<integer, Error>} - number of deleted items\n   * @access public\n   * @override\n   */\n  delete(criteria) {\n    criteria = this._prepareCriteria(criteria);\n    return new Promise( (resolve, reject) => {\n      this.collection.remove(criteria, (err, deleteResult) => {\n        if(err) {\n          return reject( new Error('Storage error: delete() ' + err.message) );\n        }\n        let affetctedRows = deleteResult.result.n;\n        resolve(affetctedRows);\n      });\n    });\n  }\n\n  /**\n   * Prepare criteria Object\n   *\n   * @param {Object} criteria - MongoDb criteria Object\n   * @return {Object} criteria - MongoDb criteria Object with first level id string replaced by ObjectId\n   * @access private\n   *\n   * @todo: manage multi level, array, recursive replacement\n   */\n  _prepareCriteria(criteria) {\n    if(criteria._id && criteria._id.constructor === String) {\n      criteria._id = ObjectId(criteria._id);\n    }\n    return criteria;\n  }\n\n  /**\n   * Remove id criteria if any\n   *\n   * @param {Object} criteria - MongoDb criteria Object\n   * @return {Object} criteria - MongoDb criteria Object without first level id criteria\n   * @access private\n   */\n  _stripIdCriteria(criteria) {\n    if(criteria._id) {\n      delete criteria._id;\n    }\n    return criteria;\n  }\n}\n"
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Storage",
+    "memberof": "src/Storage/Db.js",
+    "longname": "src/Storage/Db.js~Storage",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Storage/Db.js",
+    "importStyle": "Storage",
+    "description": "Manage data from a mongodb collection.",
+    "lineNumber": 7,
+    "interface": false,
+    "extends": [
+      "src/Storage/Abstract~AbstractStorage"
+    ]
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Storage/Db.js~Storage",
+    "longname": "src/Storage/Db.js~Storage#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 12,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "collection",
+        "description": "A mongodb collection"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "get",
+    "memberof": "src/Storage/Db.js~Storage",
+    "longname": "src/Storage/Db.js~Storage#get",
+    "access": "public",
+    "description": "Get a list of data Object from criteria and options",
+    "lineNumber": 25,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "mongodb criteria style"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": "mongodb options style"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Object[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "override": true,
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "getByPage",
+    "memberof": "src/Storage/Db.js~Storage",
+    "longname": "src/Storage/Db.js~Storage#getByPage",
+    "access": "public",
+    "description": "Get a paginated list of data Object",
+    "lineNumber": 50,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "mongodb criteria style"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "integer"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "page",
+        "description": "the page to retrieve"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "integer"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "limit",
+        "description": "number of item per page"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "orderby",
+        "description": "a mongodb collection property to order the list result"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "order",
+        "description": "'asc' or 'desc'"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Object[], Error>"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "insert",
+    "memberof": "src/Storage/Db.js~Storage",
+    "longname": "src/Storage/Db.js~Storage#insert",
+    "access": "public",
+    "description": "Insert many data Object in database",
+    "lineNumber": 67,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object[]"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "dataArray",
+        "description": "a list of data Object"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<Object[], Error>"
+      ],
+      "spread": false,
+      "description": "inserted data Object list"
+    },
+    "override": true,
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "update",
+    "memberof": "src/Storage/Db.js~Storage",
+    "longname": "src/Storage/Db.js~Storage#update",
+    "access": "public",
+    "description": "Update collection from criteria",
+    "lineNumber": 95,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "MongoDb criteria Object"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "newValues",
+        "description": "key-value Object with new data"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": "MongoDb options"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "boolean"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.upsert",
+        "description": "insert if not exists"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "boolean"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options.multi",
+        "description": "update multi Object enabled"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<integer, Error>"
+      ],
+      "spread": false,
+      "description": "number of updated items"
+    },
+    "override": true,
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "delete",
+    "memberof": "src/Storage/Db.js~Storage",
+    "longname": "src/Storage/Db.js~Storage#delete",
+    "access": "public",
+    "description": "Delete collection Object from criteria",
+    "lineNumber": 116,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "MongoDb criteria Object"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Promise<integer, Error>"
+      ],
+      "spread": false,
+      "description": "number of deleted items"
+    },
+    "override": true,
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "_prepareCriteria",
+    "memberof": "src/Storage/Db.js~Storage",
+    "longname": "src/Storage/Db.js~Storage#_prepareCriteria",
+    "access": "private\n\n@todo: manage multi level, array, recursive replacement",
+    "description": "Prepare criteria Object",
+    "lineNumber": 138,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "MongoDb criteria Object"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Object"
+      ],
+      "spread": false,
+      "description": "criteria - MongoDb criteria Object with first level id string replaced by ObjectId"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "_stripIdCriteria",
+    "memberof": "src/Storage/Db.js~Storage",
+    "longname": "src/Storage/Db.js~Storage#_stripIdCriteria",
+    "access": "private",
+    "description": "Remove id criteria if any",
+    "lineNumber": 152,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "criteria",
+        "description": "MongoDb criteria Object"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Object"
+      ],
+      "spread": false,
+      "description": "criteria - MongoDb criteria Object without first level id criteria"
+    },
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Validator.js",
+    "memberof": null,
+    "longname": "src/Validator.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import { ValidatorError } from './Errors';\nimport validatorLib from './utils/validatorLib';\n\n/**\n * Class to validate properties of a Vo\n */\nexport default class Validator {\n\n  /**\n   * @param {?Vo} vo - a Vo to validate\n   */\n  constructor(vo=null) {\n    /** @type {Vo} */\n    this._vo = vo;\n    /** @type {Object} - associated key-val as property name / array of errors*/\n    this.errors = {};\n  }\n\n  /**\n   * Validate all the properties of the current Vo\n   * @return {Validator}\n   * @throw {ValidatorError}\n   * @access public\n   */\n  validateVo() {\n    let properties = this._vo.constructor.getPropertiesNames();\n    this.errors = {};\n    properties.forEach( property => {\n      try {\n        this.constructor.checkProperty(property, this._vo[property]);\n      }\n      catch(err) {\n        this.errors[property] = err.message;\n      }\n    });\n    return this;\n  }\n\n  /**\n   * To know if the validation failed\n   * @return {Boolean}\n   * @access public\n   */\n  hasError() {\n    return Object.keys(this.errors).length > 0;\n  }\n\n  /**\n   * Is a property unique?\n   * @param {String} property - the property name\n   * @return {Boolean}\n   * @access public\n   */\n  static isPropertyUnique(property) {\n    return this.uniques.indexOf(property) > -1;\n  }\n\n  /**\n   * Is a property required?\n   * @param {String} property - the property name\n   * @return {Boolean}\n   * @access public\n   */\n  static isPropertyRequired(property) {\n    return this.required.indexOf(property) > -1;\n  }\n\n  /**\n   * Is there any validation rule for a given property\n   * @param {String} property - the property name\n   * @return {Boolean}\n   * @access public\n   */\n  static hasRulesFor(property) {\n    return this.rules[property] ? true : false;\n  }\n\n  /**\n   * Get the list of validation rules\n   * @param {String} property - the property name\n   * @return {Array}\n   * @access public\n   */\n  static getRulesFor(property) {\n    return this.rules[property] ? this.rules[property] : [];\n  }\n\n  /**\n   * Does a property need to be checked?\n   * @param {String} property - the property name\n   * @param {any} value - the property value\n   * @return {Array}\n   * @access public\n   */\n  static needToCheckProperty(property, value) {\n    let skipIfEmpty = !this.isPropertyRequired(property);\n    let isEmpty = !Validator.validate('required', value);\n\n    return (isEmpty && skipIfEmpty) ? false : true;\n  }\n\n  /**\n   * Check a property value\n   * @param {String} property - the property name\n   * @param {any} value - the property value\n   * @return {true}\n   * @throw {ValidatorError}\n   * @access public\n   */\n  static checkProperty(property, value) {\n    if(this.needToCheckProperty(property, value)) {\n      this.getRulesFor(property).forEach( validator => {\n        let args = validator.args || [];\n        let skipIfEmpty = !this.isPropertyRequired(property);\n\n        if(args.constructor!==Array) {\n          args = [args];\n        }\n        if(!this.validate(validator.fct, value, args, skipIfEmpty)) {\n          throw new ValidatorError(validator.msg);\n        }\n      });\n    }\n    return true;\n  }\n\n  /**\n   * Run a validator rules and get the result\n   * @param {any} fct - the validation function or validator string name\n   * @param {any} value - the property value\n   * @param {Array} args - the validation rule options\n   * @param {Boolean} skipIfEmpty - skip to check if the property is empty\n   * @return {Boolean}\n   * @throw {ValidatorError}\n   * @access public\n   */\n  static validate(fct, value, args=[], skipIfEmpty=false) {\n    // @tocheck if really usefull...\n    if(skipIfEmpty && !value) {\n      return true;\n    }\n\n    let funcArgs = [value].concat(args);\n    if(fct.constructor === Function) {\n      return fct.apply(null, funcArgs);\n    }\n    if(fct.constructor === String) {\n      return validatorLib[fct].apply(null, funcArgs);\n    }\n    throw new ValidatorError('Wrong validator function');\n  }\n}\n\nValidator.initFromVoClass = function(ValidatorChild, properties) {\n  let ruleset = {};\n  let requiredProperties = [];\n  let uniqueProperties = [];\n\n  Object.keys(properties).forEach((name) => {\n    let isRequired = properties[name].required && true===properties[name].required;\n    let isUnique = properties[name].unique && true===properties[name].unique;\n    let validators = properties[name].validators || [];\n    ruleset[name] = [];\n\n    if(isUnique) {\n      uniqueProperties.push(name);\n    }\n    if(isRequired) {\n      requiredProperties.push(name);\n    }\n\n    validators.forEach( itemCfg => {\n      if(!itemCfg.fct) {\n        throw new Error('Configuration error: validator need a fct');\n      }\n      ruleset[name].push({\n        fct: itemCfg.fct,\n        msg: itemCfg.msg || '',\n        args: itemCfg.args || [],\n        skipIfEmpty: !isRequired\n      });\n    });\n  });\n\n  Object.defineProperty(ValidatorChild, 'rules', {\n    enumerable: false,\n    writable: false,\n    configurable: false,\n    value: ruleset\n  });\n\n  Object.defineProperty(ValidatorChild, 'required', {\n    enumerable: false,\n    writable: false,\n    configurable: false,\n    value: requiredProperties\n  });\n\n  Object.defineProperty(ValidatorChild, 'uniques', {\n    enumerable: false,\n    writable: false,\n    configurable: false,\n    value: uniqueProperties\n  });\n};\n"
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Validator",
+    "memberof": "src/Validator.js",
+    "longname": "src/Validator.js~Validator",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Validator.js",
+    "importStyle": "Validator",
+    "description": "Class to validate properties of a Vo",
+    "lineNumber": 7,
+    "interface": false
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 12,
+    "params": [
+      {
+        "nullable": true,
+        "types": [
+          "Vo"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "vo",
+        "description": "a Vo to validate"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "_vo",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator#_vo",
+    "access": null,
+    "description": null,
+    "lineNumber": 14,
+    "type": {
+      "nullable": null,
+      "types": [
+        "Vo"
+      ],
+      "spread": false,
+      "description": null
+    }
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "errors",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator#errors",
+    "access": null,
+    "description": null,
+    "lineNumber": 16,
+    "type": {
+      "nullable": null,
+      "types": [
+        "Object"
+      ],
+      "spread": false,
+      "description": null
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "validateVo",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator#validateVo",
+    "access": "public",
+    "description": "Validate all the properties of the current Vo",
+    "lineNumber": 25,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{ValidatorError}"
+      }
+    ],
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Validator"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "errors",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator#errors",
+    "access": null,
+    "description": null,
+    "lineNumber": 27,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "hasError",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator#hasError",
+    "access": "public",
+    "description": "To know if the validation failed",
+    "lineNumber": 44,
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "isPropertyUnique",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator.isPropertyUnique",
+    "access": "public",
+    "description": "Is a property unique?",
+    "lineNumber": 54,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "isPropertyRequired",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator.isPropertyRequired",
+    "access": "public",
+    "description": "Is a property required?",
+    "lineNumber": 64,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "hasRulesFor",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator.hasRulesFor",
+    "access": "public",
+    "description": "Is there any validation rule for a given property",
+    "lineNumber": 74,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "getRulesFor",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator.getRulesFor",
+    "access": "public",
+    "description": "Get the list of validation rules",
+    "lineNumber": 84,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Array"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "needToCheckProperty",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator.needToCheckProperty",
+    "access": "public",
+    "description": "Does a property need to be checked?",
+    "lineNumber": 95,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": "the property value"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Array"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "checkProperty",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator.checkProperty",
+    "access": "public",
+    "description": "Check a property value",
+    "lineNumber": 110,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{ValidatorError}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": "the property value"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "true"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "validate",
+    "memberof": "src/Validator.js~Validator",
+    "longname": "src/Validator.js~Validator.validate",
+    "access": "public",
+    "description": "Run a validator rules and get the result",
+    "lineNumber": 137,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{ValidatorError}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "fct",
+        "description": "the validation function or validator string name"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": "the property value"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Array"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "args",
+        "description": "the validation rule options"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Boolean"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "skipIfEmpty",
+        "description": "skip to check if the property is empty"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "initFromVoClass",
+    "memberof": "src/Validator.js",
+    "longname": "src/Validator.js~initFromVoClass",
+    "access": null,
+    "export": false,
+    "importPath": "piggy-module/src/Validator.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 154,
+    "undocument": true,
+    "params": [
+      {
+        "name": "ValidatorChild",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "properties",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/Vo.js",
+    "memberof": null,
+    "longname": "src/Vo.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import { VoError } from './Errors';\nimport caster from './utils/castValue';\n\nlet ID_KEY= '_id';\n\n/**\n * Value Object\n */\nexport default class Vo {\n\n  /**\n   * @param {Object} data - the object data\n   */\n  constructor(data = {}) {\n    this.resetData();\n    this.setData(data);\n    /** @type {String} */\n    this._status = this.id ? Vo.STATUS.SAVED : Vo.STATUS.NEW;\n  }\n\n  /**\n   * Get the id as string\n   * @return {String}\n   */\n  get id() {\n    return this.data[ID_KEY] ? this.data[ID_KEY].toString() : null;\n  }\n\n  /**\n   * Get the cleaned dto\n   * @return {Object}\n   */\n  get dto() {\n    return this.data;\n  }\n\n  /**\n   * Is the object new (not saved) ?\n   * @return {Boolean}\n   */\n  get isNew() {\n    return this.status === Vo.STATUS.NEW;\n  }\n\n  /**\n   * Is the object unsaved (exist in storage but has changed) ?\n   * @return {Boolean}\n   */\n  get isChanged() {\n    return this.status === Vo.STATUS.CHANGED;\n  }\n\n  /**\n   * Is the object saved in storage ?\n   * @return {Boolean}\n   */\n  get isSaved() {\n    return this.status === Vo.STATUS.SAVED;\n  }\n\n  /**\n   * Property getter\n   * @param {string} key - the property name\n   * @param {?any} defaultValue - the default value if the property is not set\n   * @return {any}\n   * @throw {VoError} - if property does not exist\n   * @access public\n   */\n  get(key, defaultValue=null) {\n    this.constructor.assumePropertyExists(key);\n    return this.data[key] ? this.data[key] : defaultValue;\n  }\n\n  /**\n   * Property setter\n   * @param {string} key - the property name\n   * @param {any} value - the value to assign\n   * @return {self}\n   * @throw {VoError} - if property does not exist\n   * @access public\n   */\n  set(key, value) {\n    this.constructor.assumePropertyExists(key);\n    value = this.castVoPropertyValue(key, value);\n    if (this.data[key] !== value) {\n      this.data[key]= value;\n      this._updateStatus(Vo.STATUS.CHANGED);\n    }\n    return this;\n  }\n\n  /**\n   * Multi property setting\n   * @param {Object} data - associated key value object\n   * @return {self}\n   * @access public\n   */\n  setData(data={}) {\n    Object.keys(data).forEach( property => {\n      this.set(property, data[property]);\n    });\n    return this;\n  }\n\n  /**\n   * Reset all vo data\n   * @return {self}\n   * @access public\n   */\n  resetData() {\n    this.data = {};\n    return this;\n  }\n\n  /**\n   * Status (from Vo.STATUS values: 'new', 'changed' or 'saved')\n   * @return {String}\n   */\n  get status() {\n    return this._status;\n  }\n\n  /**\n   * To make sure status cannot be access in public\n   * @param {any} value\n   * @throw {Error}\n   */\n  set status(value) {\n    throw new Error('Vo Status cannot be changed');\n  }\n\n  /**\n   * Cast a Vo property and return property well formated\n   * @param {String} key - the property name\n   * @param {any} value - the property value to cast\n   * @return {any} - the cast property\n   * @access public\n   */\n  castVoPropertyValue(key, value) {\n    this.constructor.assumePropertyExists(key);\n    try {\n      return caster(value, this.constructor.getPropertyConfig(key).type);\n    }\n    catch(err) {\n      throw new VoError('Cast property failed for property \"' + key + '\": ' + err.message);\n    }\n  }\n\n  /**\n   * Update the status and trigger status change event\n   * @param {String} newStatus - the new status (one of the Vo.STATUS)\n   * @return {boolean} - true if the status has changed, else false\n   * @access private\n   */\n  _updateStatus(newStatus) {\n    if(this.status === newStatus) {\n      return false;\n    }\n    let previousStatus = this.status;\n    this._status = newStatus;\n    this.statusChangeTrigger(previousStatus, newStatus);\n    return true;\n  }\n\n  /**\n   * Method triggered when status change. To override by custom one\n   * @param {String} previousStatus - the old status (one of the Vo.STATUS)\n   * @param {String} newStatus - the new status (one of the Vo.STATUS)\n   * @access protected\n   */\n  statusChangeTrigger(previousStatus, newStatus) {} // jshint ignore:line\n\n  /**\n   * Get the primary key name\n   * @return {String}\n   */\n  static get primaryKey() {\n    return ID_KEY;\n  }\n\n  /**\n   * Check if a Vo property exists, else throw an Error\n   * @param {String} property - the property name\n   * @throw {VoError}\n   * @access public\n   * @static\n   */\n  static assumePropertyExists(property) {\n    if(!this.hasProperty(property)) {\n      throw new VoError('The property ' + property + ' is not defined in ' + this.constructor.name);\n    }\n  }\n\n  /**\n   * Check if a Vo property exists\n   * @param {String} property - the property name\n   * @return {boolean}\n   * @access public\n   * @static\n   */\n  static hasProperty(property) {\n    return this.getPropertiesNames().indexOf(property) > -1;\n  }\n\n  /**\n   * Get a list of all the properies of the Vo\n   * @return {String[]}\n   * @access public\n   * @static\n   */\n  static getPropertiesNames() {\n    return Object.keys(this._properties);\n  }\n\n  /**\n   * Get all configuration of a property\n   * @param {String} property - the property name\n   * @return {Object}\n   * @throw {VoError} - if property does not exist\n   * @access public\n   * @static\n   */\n  static getPropertyConfig(property) {\n    this.assumePropertyExists(property);\n    return this._properties[property];\n  }\n\n  /**\n   * Get the type of a property according to config\n   * @param {String} property - the property name\n   * @return {String}\n   * @throw {VoError} - if property does not exist\n   */\n  static getPropertyType(property) {\n    this.assumePropertyExists(property);\n    return this.getPropertyConfig(property).type || null;\n  }\n\n  /**\n   * Get the default value of a property according to config\n   * @param {String} property - the property name\n   * @return {String}\n   * @throw {VoError} - if property does not exist\n   */\n  static getPropertyDefault(property) {\n    this.assumePropertyExists(property);\n    return this.getPropertyConfig(property).default || null;\n  }\n}\n\nObject.defineProperty(Vo, 'STATUS', {\n  enumerable: false,\n  writable: false,\n  configurable: false,\n  value: Object.freeze({\n    NEW: 'new',\n    CHANGED: 'changed',\n    SAVED: 'saved'\n  })\n});\n\nVo.init = function(VoChild, properties) {\n  let objectProperties = {};\n  Object.keys(properties).forEach((name) => {\n    if (VoChild.hasOwnProperty(name)) {\n      throw new Error('Property ' + name + ' is a reserved keyname');\n    }\n\n    let cleanedProperty = {};\n    ['type', 'default'].forEach( elmt => {\n      if(properties[name][elmt]) {\n        cleanedProperty[elmt] = properties[name][elmt];\n      }\n    });\n    objectProperties[name] = cleanedProperty;\n\n    Object.defineProperty(VoChild.prototype, name, {\n      get: function() {\n        return this.get(name);\n      },\n      set: function(value) {\n        this.set(name, value);\n      }\n    });\n  });\n\n  Object.defineProperty(VoChild, '_properties', {\n    enumerable: false,\n    writable: false,\n    configurable: false,\n    value: objectProperties\n  });\n};\n"
+  },
+  {
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "ID_KEY",
+    "memberof": "src/Vo.js",
+    "longname": "src/Vo.js~ID_KEY",
+    "access": null,
+    "export": false,
+    "importPath": "piggy-module/src/Vo.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "string"
+      ]
+    }
+  },
+  {
+    "kind": "class",
+    "static": true,
+    "variation": null,
+    "name": "Vo",
+    "memberof": "src/Vo.js",
+    "longname": "src/Vo.js~Vo",
+    "access": null,
+    "export": true,
+    "importPath": "piggy-module/src/Vo.js",
+    "importStyle": "Vo",
+    "description": "Value Object",
+    "lineNumber": 9,
+    "interface": false
+  },
+  {
+    "kind": "constructor",
+    "static": false,
+    "variation": null,
+    "name": "constructor",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#constructor",
+    "access": null,
+    "description": null,
+    "lineNumber": 14,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "data",
+        "description": "the object data"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "_status",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#_status",
+    "access": null,
+    "description": null,
+    "lineNumber": 18,
+    "type": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": null
+    }
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "id",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#id",
+    "access": null,
+    "description": "Get the id as string",
+    "lineNumber": 25,
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "dto",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#dto",
+    "access": null,
+    "description": "Get the cleaned dto",
+    "lineNumber": 33,
+    "return": {
+      "nullable": null,
+      "types": [
+        "Object"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "isNew",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#isNew",
+    "access": null,
+    "description": "Is the object new (not saved) ?",
+    "lineNumber": 41,
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "isChanged",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#isChanged",
+    "access": null,
+    "description": "Is the object unsaved (exist in storage but has changed) ?",
+    "lineNumber": 49,
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "isSaved",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#isSaved",
+    "access": null,
+    "description": "Is the object saved in storage ?",
+    "lineNumber": 57,
+    "return": {
+      "nullable": null,
+      "types": [
+        "Boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "get",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#get",
+    "access": "public",
+    "description": "Property getter",
+    "lineNumber": 69,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{VoError} - if property does not exist"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": "the property name"
+      },
+      {
+        "nullable": true,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "defaultValue",
+        "description": "the default value if the property is not set"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "any"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "set",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#set",
+    "access": "public",
+    "description": "Property setter",
+    "lineNumber": 82,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{VoError} - if property does not exist"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": "the property name"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": "the value to assign"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "self"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "setData",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#setData",
+    "access": "public",
+    "description": "Multi property setting",
+    "lineNumber": 98,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "data",
+        "description": "associated key value object"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "self"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "resetData",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#resetData",
+    "access": "public",
+    "description": "Reset all vo data",
+    "lineNumber": 110,
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "self"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "data",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#data",
+    "access": null,
+    "description": null,
+    "lineNumber": 111,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "get",
+    "static": false,
+    "variation": null,
+    "name": "status",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#status",
+    "access": null,
+    "description": "Status (from Vo.STATUS values: 'new', 'changed' or 'saved')",
+    "lineNumber": 119,
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "set",
+    "static": false,
+    "variation": null,
+    "name": "status",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#status",
+    "access": null,
+    "description": "To make sure status cannot be access in public",
+    "lineNumber": 128,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{Error}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "castVoPropertyValue",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#castVoPropertyValue",
+    "access": "public",
+    "description": "Cast a Vo property and return property well formated",
+    "lineNumber": 139,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "key",
+        "description": "the property name"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": "the property value to cast"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "any"
+      ],
+      "spread": false,
+      "description": "the cast property"
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "_updateStatus",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#_updateStatus",
+    "access": "private",
+    "description": "Update the status and trigger status change event",
+    "lineNumber": 155,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "newStatus",
+        "description": "the new status (one of the Vo.STATUS)"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "boolean"
+      ],
+      "spread": false,
+      "description": "true if the status has changed, else false"
+    },
+    "generator": false
+  },
+  {
+    "kind": "member",
+    "static": false,
+    "variation": null,
+    "name": "_status",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#_status",
+    "access": null,
+    "description": null,
+    "lineNumber": 160,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "method",
+    "static": false,
+    "variation": null,
+    "name": "statusChangeTrigger",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo#statusChangeTrigger",
+    "access": "protected",
+    "description": "Method triggered when status change. To override by custom one",
+    "lineNumber": 171,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "previousStatus",
+        "description": "the old status (one of the Vo.STATUS)"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "newStatus",
+        "description": "the new status (one of the Vo.STATUS)"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "get",
+    "static": true,
+    "variation": null,
+    "name": "primaryKey",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo.primaryKey",
+    "access": null,
+    "description": "Get the primary key name",
+    "lineNumber": 177,
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "assumePropertyExists",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo.assumePropertyExists",
+    "access": "public",
+    "description": "Check if a Vo property exists, else throw an Error",
+    "lineNumber": 188,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{VoError}"
+      },
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "hasProperty",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo.hasProperty",
+    "access": "public",
+    "description": "Check if a Vo property exists",
+    "lineNumber": 201,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "boolean"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "getPropertiesNames",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo.getPropertiesNames",
+    "access": "public",
+    "description": "Get a list of all the properies of the Vo",
+    "lineNumber": 211,
+    "unknown": [
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      }
+    ],
+    "params": [],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String[]"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "getPropertyConfig",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo.getPropertyConfig",
+    "access": "public",
+    "description": "Get all configuration of a property",
+    "lineNumber": 223,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{VoError} - if property does not exist"
+      },
+      {
+        "tagName": "@static",
+        "tagValue": ""
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Object"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "getPropertyType",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo.getPropertyType",
+    "access": null,
+    "description": "Get the type of a property according to config",
+    "lineNumber": 234,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{VoError} - if property does not exist"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "method",
+    "static": true,
+    "variation": null,
+    "name": "getPropertyDefault",
+    "memberof": "src/Vo.js~Vo",
+    "longname": "src/Vo.js~Vo.getPropertyDefault",
+    "access": null,
+    "description": "Get the default value of a property according to config",
+    "lineNumber": 245,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{VoError} - if property does not exist"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "String"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "property",
+        "description": "the property name"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "String"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "init",
+    "memberof": "src/Vo.js",
+    "longname": "src/Vo.js~init",
+    "access": null,
+    "export": false,
+    "importPath": "piggy-module/src/Vo.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 262,
+    "undocument": true,
+    "params": [
+      {
+        "name": "VoChild",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "properties",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/index.js",
+    "memberof": null,
+    "longname": "src/index.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "export { default as Vo } from './Vo';\nexport { default as Validator } from './Validator';\nexport { default as Manager } from './Manager';\nexport { default as Errors } from './Errors';\n"
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/utils/castValue.js",
+    "memberof": null,
+    "longname": "src/utils/castValue.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import sanitizer from 'validator';\n\n/**\n * Cast a value to match a given type\n * @param {any} value - the value to cast\n * @param {any} type - type of the object: Array, String, Object, ...\n * @return {any} - the value casted\n * @throw {Error} - if cast failed\n */\nlet castValue = module.exports = function(value, type) {\n\n  if (value == null) {\n    return value;\n  }\n\n  switch(type.constructor) {\n    case Array:\n      if (value.constructor !== Array) {\n        throw new Error('Invalid array');\n      }\n      let arrayType = type[0];\n      value.forEach((arrayValue, index) => {\n        value[index] = castValue(arrayValue, arrayType);\n      });\n      return value;\n\n    case Object:\n      if (value.constructor !== Object) {\n          throw new Error('Invalid object');\n      }\n      Object.keys(type).forEach((key) => {\n        value[key] = castValue(type[key], value[key]);\n      });\n      return value;\n\n    case Function:\n      switch(type.name) {\n        case 'Date':\n          return value.constructor === Date ? value : sanitizer.toDate(value);\n        case 'String':\n          return value.constructor === String ? value : String(value);\n        case 'Number':\n          let v = value.constructor === Number ? value : Number(value);\n          if(Number.isNaN( v )) {\n            throw new Error('Invalid number');\n          }\n          return v;\n        case 'Boolean':\n          return value.constructor!==Boolean ? Boolean(value) : (value===true || value ===1 || value==='1');\n        default:\n          return (type.name===value.constructor.name) ? value : value.constructor.name(value);\n      }\n  }\n\n  if (value.constructor.name !== type) {\n    throw new Error('Invalid object ' + type.constructor.name + ', ' + type);\n  }\n\n  return value;\n};\n"
+  },
+  {
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "castValue",
+    "memberof": "src/utils/castValue.js",
+    "longname": "src/utils/castValue.js~castValue",
+    "access": null,
+    "export": false,
+    "importPath": "piggy-module/src/utils/castValue.js",
+    "importStyle": null,
+    "description": "Cast a value to match a given type",
+    "lineNumber": 10,
+    "unknown": [
+      {
+        "tagName": "@throw",
+        "tagValue": "{Error} - if cast failed"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "value",
+        "description": "the value to cast"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "any"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "type",
+        "description": "type of the object: Array, String, Object, ..."
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "any"
+      ],
+      "spread": false,
+      "description": "the value casted"
+    },
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/utils/validatorLib.js",
+    "memberof": null,
+    "longname": "src/utils/validatorLib.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "import validator from 'validator';\n\n/**\n * Add required validator checking a value is set (not null nor empty)\n */\nvalidator.extend('required', function (value) {\n    return (\n        null === value ||\n        (String === value.constructor && value === '') ||\n        (Array === value.constructor && value.length === 0)\n    ) ? false : true;\n});\n\nexport default validator;\n"
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Infinity",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Infinity",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Infinity",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "NaN",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~NaN",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "undefined",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~undefined",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "null",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~null",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Object",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~object",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Function",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~function",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Boolean",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~boolean",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Symbol",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Symbol",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Error",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Error",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "EvalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~EvalError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "InternalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/InternalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~InternalError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "RangeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RangeError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "ReferenceError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ReferenceError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "SyntaxError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~SyntaxError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "TypeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~TypeError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "URIError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~URIError",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Number",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~number",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Date",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Date",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "String",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~String",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "string",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~string",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "RegExp",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RegExp",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int8Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint8ClampedArray",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8ClampedArray",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int16Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint16Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int32Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint32Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Float32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float32Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Float64Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float64Array",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Map",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Map",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Set",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Set",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "WeakMap",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakMap",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "WeakSet",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakSet",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "ArrayBuffer",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ArrayBuffer",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "DataView",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~DataView",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "JSON",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~JSON",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Promise",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Promise",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Generator",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Generator",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "GeneratorFunction",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~GeneratorFunction",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Reflect",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Reflect",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Reflect",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Proxy",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Proxy",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "CanvasRenderingContext2D",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~CanvasRenderingContext2D",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "DocumentFragment",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~DocumentFragment",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Element",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Element",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Element",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Event",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Event",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Event",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Node",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Node",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Node",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "NodeList",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/NodeList",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~NodeList",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  },
+  {
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "XMLHttpRequest",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~XMLHttpRequest",
+    "access": null,
+    "description": null,
+    "builtinExternal": true
+  }
+]
