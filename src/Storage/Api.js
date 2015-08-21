@@ -1,37 +1,31 @@
 import AbstractStorage from './Abstract';
 
-class ApiStorage extends AbstractStorage {
+export default class ApiStorage extends AbstractStorage {
 
   get(criteria = {}, options= {}) {
-    let method = 'GET';
+    let method = 'get';
     let path = '';
-    let params = {};
-    return this._runRequest(method, path, params)
+    return this._runRequest(method, path)
       .then( result => {
-        alert('result');
-        alert(result);
+        console.log('RESULT', result);
         return result;
       })
       .catch( err => {
-        alert('error');
-        alert(error);
+        console.log('ERROR', err);
         throw new Error(err.message);
       });
   }
 
   insert(voData) {
-    let method = 'POST';
-
+    let method = 'post';
   }
 
   update(criteria={}, newValues={}, options={}) {
-    let method = 'PATCH';
-
+    let method = 'patch';
   }
 
   delete(criteria) {
-    let method = 'DELETE';
-
+    let method = 'delete';
   }
 
   getFetcherOption() {
@@ -40,35 +34,37 @@ class ApiStorage extends AbstractStorage {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({})
+      }
     };
   }
 
-  _runRequest(method, path='', params={}) {
+  _runRequest(method, path='', params=null) {
     let url = this._collection + path;
     let options = this.getFetcherOption();
+    if(params) {
+      options.body = JSON.stringify(params);
+    }
     options.method = method;
 
     return new Promise( (resolve, reject) => {
       fetch(url, options)
         .then(function(response) {
-console.log('response', response);
-
-          if (response.status < 200 || response.status >= 300) {
-console.log('error', error);
-            var error = new Error(response.statusText)
-            error.response = response
-            return reject(error);
+          if (response.status > 200 || response.status < 300) {
+            return response;
           }
-          return response;
-        })
-        .then(response => {
-console.log('status', response.status);
-console.log('json', response.json());
-          return resolve(response.json());
-        })
-        .catch( (err) => {
+          var error = new Error(response.statusText)
+          error.response = response
+          return reject(error);
+        }).then( response => {
+          return response.json();
+        }).then( json => {
+          let errors= json.errors || null;
+          if(errors) {
+            return reject(errors); // @todo à améliorer => objet erreur ...
+          }
+          let data= json.data || [];
+          return resolve( data.map( item => item.attributes ));
+        }).catch( err => {
           return reject(err);
         });
     });
