@@ -45,6 +45,14 @@ let castValue = module.exports = function(value, type) {
             throw new Error('Invalid number');
           }
           return v;
+        case 'Object':
+          // Sorry for that fucking workaround.
+          // Cannot forec cast coz require ObjectID AND don't want to put hard deendency here. Gonna find another way.
+          // Maybe the validator depends on the storage?
+          if(value.constructor === Object || value.constructor.name === 'ObjectID') {
+            return value;
+          }
+          break;
         case 'Boolean':
           return value.constructor!==Boolean ? Boolean(value) : (value===true || value ===1 || value==='1');
         default:
@@ -52,7 +60,7 @@ let castValue = module.exports = function(value, type) {
       }
   }
 
-  if (value.constructor.name !== type) {
+  if (value.constructor && value.constructor.name && value.constructor.name !== type) {
     throw new Error('Invalid object ' + type.constructor.name + ', ' + type);
   }
 
