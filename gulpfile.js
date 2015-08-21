@@ -13,7 +13,8 @@ function gulpBuild(source) {
     .pipe(babel({
       compact: true,
       comments: false,
-      blacklist: ['regenerator']
+      blacklist: ['regenerator'],
+      optional: ['asyncToGenerator', 'runtime']
     }))
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(config.dist));

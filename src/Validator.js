@@ -1,5 +1,5 @@
-import { ValidatorError } from './Errors';
 import validatorLib from './utils/validatorLib';
+import ValidationPropertyError from './ValidationPropertyError';
 
 /**
  * Class to validate properties of a Vo
@@ -9,7 +9,7 @@ export default class Validator {
   /**
    * @param {?Vo} vo - a Vo to validate
    */
-  constructor(vo=null) {
+  constructor(vo = null) {
     /** @type {Vo} */
     this._vo = vo;
     /** @type {Object} - associated key-val as property name / array of errors*/
@@ -19,18 +19,18 @@ export default class Validator {
   /**
    * Validate all the properties of the current Vo
    * @return {Validator}
-   * @throw {ValidatorError}
    * @access public
    */
   validateVo() {
     let properties = this._vo.constructor.getPropertiesNames();
     this.errors = {};
+
     properties.forEach( property => {
       try {
         this.constructor.checkProperty(property, this._vo[property]);
       }
       catch(err) {
-        this.errors[property] = err.message;
+        this.errors[property] = err;
       }
     });
     return this;
@@ -104,20 +104,21 @@ export default class Validator {
    * @param {String} property - the property name
    * @param {any} value - the property value
    * @return {true}
-   * @throw {ValidatorError}
+   * @throw {Error}
    * @access public
    */
   static checkProperty(property, value) {
-    if(this.needToCheckProperty(property, value)) {
+    if (this.needToCheckProperty(property, value)) {
       this.getRulesFor(property).forEach( validator => {
         let args = validator.args || [];
         let skipIfEmpty = !this.isPropertyRequired(property);
 
-        if(args.constructor!==Array) {
+        if (args.constructor!==Array) {
           args = [args];
         }
-        if(!this.validate(validator.fct, value, args, skipIfEmpty)) {
-          throw new ValidatorError(validator.msg);
+        if (!this.validate(validator.fct, value, args, skipIfEmpty)) {
+          let error =  new ValidationPropertyError(property, 'format', validator.msg);
+          throw error;
         }
       });
     }
@@ -131,23 +132,23 @@ export default class Validator {
    * @param {Array} args - the validation rule options
    * @param {Boolean} skipIfEmpty - skip to check if the property is empty
    * @return {Boolean}
-   * @throw {ValidatorError}
+   * @throw {Error}
    * @access public
    */
   static validate(fct, value, args=[], skipIfEmpty=false) {
     // @tocheck if really usefull...
-    if(skipIfEmpty && !value) {
+    if (skipIfEmpty && !value) {
       return true;
     }
 
     let funcArgs = [value].concat(args);
-    if(fct.constructor === Function) {
+    if (fct.constructor === Function) {
       return fct.apply(null, funcArgs);
     }
-    if(fct.constructor === String) {
+    if (fct.constructor === String) {
       return validatorLib[fct].apply(null, funcArgs);
     }
-    throw new ValidatorError('Wrong validator function');
+    throw new Error('Wrong validator function');
   }
 }
 
@@ -162,15 +163,15 @@ Validator.initFromVoClass = function(ValidatorChild, properties) {
     let validators = properties[name].validators || [];
     ruleset[name] = [];
 
-    if(isUnique) {
+    if (isUnique) {
       uniqueProperties.push(name);
     }
-    if(isRequired) {
+    if (isRequired) {
       requiredProperties.push(name);
     }
 
     validators.forEach( itemCfg => {
-      if(!itemCfg.fct) {
+      if (!itemCfg.fct) {
         throw new Error('Configuration error: validator need a fct');
       }
       ruleset[name].push({

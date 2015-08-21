@@ -1,0 +1,1 @@
+{"version":3,"sources":["ServiceAuthError.js"],"names":[],"mappings":"2JAAqB,gBAAgB,CACxB,SADQ,gBAAgB,CACvB,OAAO,CAAE,sBADF,gBAAgB,EAEjC,IAAI,CAAC,OAAO,GAAG,OAAO,CAAC,CACxB,sBAHkB,gBAAgB","file":"ServiceAuthError.js","sourcesContent":["export default class ServiceAuthError {\n  constructor(message) {\n    this.message = message;\n  }\n}\n"],"sourceRoot":"/source/"}

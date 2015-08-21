@@ -17,52 +17,32 @@ export default class Service {
      * @type {object}
      * @private
      */
-    this._context = {};
+    this._context = null;
   }
 
   /**
    * Store a context
    *
-   * @param {string} key - the context key
-   * @param {?(number|string|Array|object)} value - the context value
+   * @param {String} key - the context key
+   * @param {any} value - the context value
    * @return {self}
    * @access public
    */
-  setContext(key, value) {
-    this._context[key]=value;
+  setContext(context) {
+    this._context=context;
     return this;
   }
 
   /**
-   * Store and override all context
+   * Get a context value or a default one
    *
-   * @param {object} context - the context key
-   * @return {self}
+   * @param {String} key - the context key
+   * @param {any} defaultValue - the default value is no context key exists
+   * @return {Boolean}
    * @access public
    */
-  setFullContext(context) {
-    this._context = context;
-    return this;
-  }
-
-  /**
-   * Create a Vo from a data object
-   *
-   * @param {object} data -
-   * @return {Promise<Vo, Error>} - new Vo
-   * @access public
-   */
-  createOneFromData(data={}) {
-    let vo = this._manager.getNewVo(data);
-    return new Promise((resolve, reject) => {
-      this._manager.saveOne(vo)
-        .catch(err => {
-          return reject(err);
-        })
-        .then(vo => {
-          return resolve(vo);
-        });
-    });
+  getContext() {
+    return this._context;
   }
 
   /**
@@ -77,6 +57,40 @@ export default class Service {
     return this._manager.get(criteria, options);
   }
 
+
+  /**
+   * Get one Vo according to criteria
+   *
+   * @param {Object} criteria - mongodb-like criteria style
+   * @param {Object} options - mongodb-like options style
+   * @return {Promise<any, Error>} - null if no Vo found or the vo
+   * @throw {Error}
+   * @access public
+   */
+  getOne(criteria={}, options={}) {
+    return new Promise( (resolve, reject) => {
+      this.get(criteria, options).then( vos => {
+        if(vos.length===0) {
+          return resolve(null);
+        }
+        if(vos.length===1) {
+          return resolve(vos[0]);
+        }
+        reject(new Error('get One has multiple results'));
+      });
+    });
+  }
+
+  getOneByUniqueProperty(property, value) {
+    let criteria = {};
+    criteria[property] = value;
+    return this.getOne(criteria);
+  }
+
+  getOneById(id) {
+    return this.getOneByUniqueProperty('_id', id);
+  }
+
   /**
    * Get a paginated list of Vo
    *
@@ -88,7 +102,7 @@ export default class Service {
    * @return {Promise<Vo[], Error>}
    * @access public
    */
-  getByPage(criteria, page=1, limit=15, orderby='id', order='asc') {
+  getByPage(criteria={}, page=1, limit=15, orderby='id', order='asc') {
     page = page > 0 ? page : 1;
     order = (order==='desc' || order===false || order===-1 || order==='-1') ? 'desc' : 'asc';
     let options = {};
@@ -98,15 +112,21 @@ export default class Service {
     return this.get(criteria, options);
   }
 
+
   /**
-   * Get a Vo from its Id
+   * Create a Vo from a data object
    *
-   * @param {string} id - the id of the Vo
-   * @return {Promise<Vo, Error>}
+   * @param {object} data -
+   * @return {Promise<Vo, Error>} - new Vo
    * @access public
    */
-  getOneById(id) {
-    return this._manager.getOneById(id);
+  insertOne(data={}) {
+    let vo = this._manager.getNewVo(data);
+    return new Promise((resolve, reject) => {
+      this._manager.insertOne(vo)
+        .catch(err => reject(err))
+        .then(vo => resolve(vo));
+    });
   }
 
   /**
@@ -116,45 +136,43 @@ export default class Service {
    * @return {Promise<Vo, Error>} - the updated Vo
    * @access public
    */
-  updateOneFromData(data, id) {
+  updateOne(id, data={}) {
+    return this.updateOneByUniqueProperty('_id', id, data);
+  }
+
+  updateOneByUniqueProperty(property, value, newData) {
     return new Promise((resolve, reject) => {
-      this.getOneById(id).then( vo => {
-        if(null===vo) {
-          return reject ('not found');
-        }
-        vo.setData(data);
-        return vo;
-      })
-      .then( vo => {
-        this._manager.saveOne(vo).then( vo => {
-          return resolve(vo);
+      this.getOneByUniqueProperty(property, value)
+        .then( vo => {
+          if(null===vo) {
+            return reject ('not found');
+          }
+          vo.setData(newData);
+          return vo;
         })
-        .catch(err => {
-          return reject(err);
-        });
-      });
+        .then( vo => {
+          this._manager.updateOne(vo)
+            .then( updatedVo => resolve(updatedVo))
+            .catch(err => reject(err));
+        })
+        .catch(err => reject(err));
     });
   }
 
-  /**
-   * Delete a Vo from its id
-   *
-   * @param {string} id - the id of the Vo
-   * @return {Promise<boolean, Error>} - true if success, false if error, null if nothing to delete
-   * @access public
-   */
-  deleteOneById(id) {
-    return new Promise((resolve, reject) => {
-      this.getOneById(id).then( vo => {
-        if(null===vo) {
-          return resolve(null);
-        }
-        this._manager.deleteOne(vo).then( success => {
-          return resolve(success===true);
-        });
-      });
+  delete(criteria={}) {
+    return new Promise( (resolve, reject) => {
+      this.get(criteria)
+        .then( vos => {
+          this._manager.delete(vos)
+            .then( deletedCount => {
+              return resolve(deletedCount);
+            })
+            .catch( error => reject(error) );
+        })
+        .catch(err => reject(err));
     });
   }
+
 
   /**
    * Get the list of Class available methods

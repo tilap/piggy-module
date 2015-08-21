@@ -1,4 +1,3 @@
-import { VoError } from './Errors';
 import caster from './utils/castValue';
 
 let ID_KEY= '_id';
@@ -63,7 +62,7 @@ export default class Vo {
    * @param {string} key - the property name
    * @param {?any} defaultValue - the default value if the property is not set
    * @return {any}
-   * @throw {VoError} - if property does not exist
+   * @throw {Error} - if property does not exist
    * @access public
    */
   get(key, defaultValue=null) {
@@ -76,7 +75,7 @@ export default class Vo {
    * @param {string} key - the property name
    * @param {any} value - the value to assign
    * @return {self}
-   * @throw {VoError} - if property does not exist
+   * @throw {Error} - if property does not exist
    * @access public
    */
   set(key, value) {
@@ -96,8 +95,13 @@ export default class Vo {
    * @access public
    */
   setData(data={}) {
-    Object.keys(data).forEach( property => {
-      this.set(property, data[property]);
+    this.constructor.getPropertiesNames().forEach( property => {
+      if(data[property]) {
+        this.set(property, data[property]);
+      }
+      else if(this.constructor.getPropertyDefault(property)) {
+        this.set(property, this.constructor.getPropertyDefault(property));
+      }
     });
     return this;
   }
@@ -142,7 +146,7 @@ export default class Vo {
       return caster(value, this.constructor.getPropertyConfig(key).type);
     }
     catch(err) {
-      throw new VoError('Cast property failed for property "' + key + '": ' + err.message);
+      throw new Error('Cast property failed for property "' + key + '": ' + err.message);
     }
   }
 
@@ -181,13 +185,13 @@ export default class Vo {
   /**
    * Check if a Vo property exists, else throw an Error
    * @param {String} property - the property name
-   * @throw {VoError}
+   * @throw {Error}
    * @access public
    * @static
    */
   static assumePropertyExists(property) {
     if(!this.hasProperty(property)) {
-      throw new VoError('The property ' + property + ' is not defined in ' + this.constructor.name);
+      throw new Error('The property ' + property + ' is not defined in ' + this.constructor.name);
     }
   }
 
@@ -216,7 +220,7 @@ export default class Vo {
    * Get all configuration of a property
    * @param {String} property - the property name
    * @return {Object}
-   * @throw {VoError} - if property does not exist
+   * @throw {Error} - if property does not exist
    * @access public
    * @static
    */
@@ -229,7 +233,7 @@ export default class Vo {
    * Get the type of a property according to config
    * @param {String} property - the property name
    * @return {String}
-   * @throw {VoError} - if property does not exist
+   * @throw {Error} - if property does not exist
    */
   static getPropertyType(property) {
     this.assumePropertyExists(property);
@@ -240,7 +244,7 @@ export default class Vo {
    * Get the default value of a property according to config
    * @param {String} property - the property name
    * @return {String}
-   * @throw {VoError} - if property does not exist
+   * @throw {Error} - if property does not exist
    */
   static getPropertyDefault(property) {
     this.assumePropertyExists(property);

@@ -9,8 +9,19 @@ export default class MongoStorage extends AbstractStorage{
   /**
    * @param {Object} collection - A mongodb collection
    */
-  constructor(collection) {
-    super(collection);
+  constructor(connector, collection) {
+    super(connector, collection);
+  }
+
+  getCollection() {
+    return new Promise( (resolve, reject) => {
+      this._connector.getCollection(this._collection)
+        .then( collection => resolve( collection ) )
+        .catch( error => {
+          console.error('MongoStorage getCollection error', error);
+          reject(error);
+        });
+    });
   }
 
   /**
@@ -25,58 +36,48 @@ export default class MongoStorage extends AbstractStorage{
   get(criteria = {}, options= {}) {
     criteria = this._prepareCriteria(criteria);
     return new Promise( (resolve, reject) => {
-      this.collection
-        .find(criteria, options)
-        .toArray( (err, items) => {
-          if(err) {
-            return reject( new Error('Storage error in get()'));
-          }
-          resolve(items);
+      this.getCollection()
+        .then( collection => {
+          collection
+            .find(criteria, options)
+            .toArray( (err, items) => {
+              if(err) {
+                return reject( new Error('Storage error in get()'));
+              }
+              resolve(items);
+            });
+        })
+        .catch( error => {
+          console.error('MongoStorage error', error);
+          reject(error);
         });
     });
   }
 
   /**
-   * Get a paginated list of data Object
-   *
-   * @param {Object} criteria - mongodb criteria style
-   * @param {integer} page - the page to retrieve
-   * @param {integer} limit - number of item per page
-   * @param {string} orderby - a mongodb collection property to order the list result
-   * @param {string} order - 'asc' or 'desc'
-   * @return {Promise<Object[], Error>}
-   * @access public
-   */
-  getByPage(criteria, page=1, limit=15, orderby='id', order='asc') {
-    page = page > 0  || 1;
-    let options = {};
-    options.limit = limit;
-    options.skip = (page-1) * limit;
-    options.sort = [[ orderby, order ? 'asc' : 'desc']];
-    return this.get(criteria, options);
-  }
-
-  /**
-   * Insert many data Object in database
+   * Insert one Object in database
    *
    * @param {Object[]} dataArray - a list of data Object
    * @return {Promise<Object[], Error>} - inserted data Object list
    * @access public
    * @override
    */
-  insert(dataArray) {
-    if(dataArray.constructor !== Array ) {
-      throw new Error('DB insert: Expected array');
-    }
-
+  insertOne(data={}) {
     return new Promise( (resolve, reject) => {
-      this.collection.insert(dataArray, (err, insertResult) => {
-        if(err) {
-          return reject( new Error ('Storage error: insert() ' + err.message) );
-        }
-        let insertedDatas = insertResult.ops;
-        resolve(insertedDatas);
-      });
+      this.getCollection()
+        .then( collection => {
+          collection.insert(data, (err, insertResult) => {
+            if(err) {
+              return reject( new Error ('Storage error: insert() ' + err.message) );
+            }
+            if(!insertResult.ops || insertResult.ops.length!==1) {
+              return reject( new Error ('Storage error: non unique result') );
+            }
+            let insertedDatas = insertResult.ops[0];
+            resolve(insertedDatas);
+          });
+        })
+        .catch( error => reject(error));
     });
   }
 
@@ -88,20 +89,32 @@ export default class MongoStorage extends AbstractStorage{
    * @param {Object} options - MongoDb options
    * @param {boolean} options.upsert - insert if not exists
    * @param {boolean} options.multi - update multi Object enabled
-   * @return {Promise<integer, Error>} - number of updated items
+   * @return {Promise<Boolean, Error>} - true if updated, else false
    * @access public
    * @override
    */
-  update(criteria, newValues, options={upsert: false, multi: true}) {
+  updateOne(criteria, newData) {
+    let options= { upsert: false, multi: false };
     criteria = this._prepareCriteria(criteria);
-    newValues = this._stripIdCriteria(newValues);
+    newData = this._stripIdCriteria(newData);
     return new Promise( (resolve, reject) => {
-      this.collection.update(criteria, { $set: newValues}, options, (err, updateResult) => {
-        if(err) {
-          return reject(new Error('Storage error: update() ' + err.message));
-        }
-        resolve(updateResult.result.n);
-      });
+      this.getCollection()
+        .then( collection => {
+            collection.update(criteria, { $set: newData}, options, (err, updateResult) => {
+            if (err) {
+              return reject(new Error('Storage error: update() ' + err.message));
+            }
+            this.get(criteria).then( vos => {
+              if(!vos[0]) {
+                return reject('Error post update #1');
+              }
+              let res = vos[0];
+              return resolve(res);
+            })
+            .catch(err => reject('Error post update #2'));
+          });
+        })
+        .catch( error => reject(error));
     });
   }
 
@@ -116,13 +129,17 @@ export default class MongoStorage extends AbstractStorage{
   delete(criteria) {
     criteria = this._prepareCriteria(criteria);
     return new Promise( (resolve, reject) => {
-      this.collection.remove(criteria, (err, deleteResult) => {
-        if(err) {
-          return reject( new Error('Storage error: delete() ' + err.message) );
-        }
-        let affetctedRows = deleteResult.result.n;
-        resolve(affetctedRows);
-      });
+      this.getCollection()
+        .then( collection => {
+          collection.deleteMany(criteria, (err, deleteResult) => {
+            if(err) {
+              return reject( new Error('Storage error: delete() ' + err.message) );
+            }
+            let deletedDocumentsCount = deleteResult.result.n;
+            resolve({ 'deletedCount' : deletedDocumentsCount});
+          });
+        })
+        .catch( error => reject(error));
     });
   }
 
@@ -136,8 +153,15 @@ export default class MongoStorage extends AbstractStorage{
    * @todo: manage multi level, array, recursive replacement
    */
   _prepareCriteria(criteria) {
-    if(criteria._id && criteria._id.constructor === String) {
-      criteria._id = ObjectId(criteria._id);
+    if (criteria._id) {
+      if (criteria._id.constructor === String) {
+        criteria._id = new ObjectId(criteria._id);
+      }
+      if (criteria._id.$in) {
+        criteria._id.$in = criteria._id.$in.map( idStr => {
+          return new ObjectId(idStr);
+        });
+      }
     }
     return criteria;
   }
