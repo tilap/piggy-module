@@ -1,3 +1,6 @@
+import ValidationPropertyError from './ValidationPropertyError';
+import ValidationError from './ValidationError';
+
 /**
  * Manage Vo items, sending and getting them to the Storage
  */
@@ -15,7 +18,7 @@ export default class Manager {
    * @throw {Error}
    */
   assumeIsOwnVoClass(vo) {
-    if(vo.constructor.name !== this.constructor.voClass.name) {
+    if (vo.constructor.name !== this.constructor.voClass.name) {
       throw new Error('Manager.assumeIsOwnVoClass() error: ' + this.constructor.voClass.name + ' expected class instace');
     }
   }
@@ -90,9 +93,9 @@ export default class Manager {
     this.assumeIsOwnVoClass(vo);
     return new Promise( (resolve, reject) => {
       this.getAllVoErrors(vo)
-        .then( errors => {
-          if(Object.keys(errors).length > 0) {
-            return reject(errors);
+        .then( validation => {
+          if (validation.hasError()) {
+            return reject(validation);
           }
           const data = [vo.data];
           this.storage.insert(data)
@@ -100,7 +103,7 @@ export default class Manager {
               throw new Error('Manager.insertOne() error: ' + err.message);
             })
             .then(newItemsData => {
-              if(newItemsData.constructor !== Array || newItemsData.length!==1) {
+              if (newItemsData.constructor !== Array || newItemsData.length!==1) {
                 return resolve(null);
               }
               resolve(this.getNewVo(newItemsData[0]));
@@ -123,9 +126,9 @@ export default class Manager {
     let criteria = {_id: vo.id};
     return new Promise( (resolve, reject) => {
       this.getAllVoErrors(vo)
-        .then( errors => {
-          if(Object.keys(errors).length > 0) {
-            return reject(errors);
+        .then( validation => {
+          if (validation.hasError()) {
+            return reject(validation);
           }
 
           return this.storage.update(criteria, vo.data)
@@ -206,7 +209,7 @@ export default class Manager {
   getByUniqueProperty(property, value) {
     return new Promise( (resolve, reject) => {
       // Check property is a unique one
-      if(!this.constructor.validatorClass.isPropertyUnique(property)) {
+      if (!this.constructor.validatorClass.isPropertyUnique(property)) {
         return reject(new Error('The property "' + property + '" is not unique'));
       }
 
@@ -243,11 +246,11 @@ export default class Manager {
    */
   getByUniquePropertyM(property, values) {
     return new Promise( (resolve, reject) => {
-      if(!this.constructor.validatorClass.isPropertyUnique(property)) {
+      if (!this.constructor.validatorClass.isPropertyUnique(property)) {
         return reject(new Error('The property "' + property + '" is not unique'));
       }
 
-      if(values.constructor!==Array) {
+      if (values.constructor!==Array) {
         return reject(new Error('Values must be an array'));
       }
 
@@ -266,29 +269,28 @@ export default class Manager {
    * Get a list of all error of a Vo
    * @param {Vo} vo - the Vo to check
    * @param {string[]} skipProperties - a list of properties not to check
-   * @return {Promise<object, Error>} - list of message errors (key: property, value: message)
+   * @return {Promise<object, Error>} - {validationError}
    * @access public
    */
   getAllVoErrors(vo, skipProperties= []) {
     this.assumeIsOwnVoClass(vo);
+    let validationError = new ValidationError();
     return new Promise( (resolve, reject) => {
       Promise.all( [this.getVoFormatErrors(vo), this.getVoUniqueErrors(vo), this.getVoBusinessErrors(vo)] )
-        .then(
-          errorsArrays => {
-            let errors = {};
-            errorsArrays.map( errorType => {
-              Object.keys(errorType).map( field => {
-                if(!errors[field] && skipProperties.indexOf(field) < 0) {
-                  errors[field] = errorType[field];
-                }
-              });
+        .then( errorsArrays => {
+          errorsArrays.map( errorsByType => {
+            Object.keys(errorsByType).map( field => {
+              if (!validationError.hasPropertyError(field) && skipProperties.indexOf(field) < 0) {
+                validationError.setPropertyError(field, errorsByType[field]);
+              }
             });
-            resolve(errors);
-          },
-          err => {
-            reject(err);
-          }
-        );
+          });
+          return resolve(validationError);
+        },
+        err => {
+          reject(err);
+        }
+      );
     });
 
   }
@@ -323,16 +325,16 @@ export default class Manager {
       let value = vo[property];
 
       // Skip if empty and not required
-      if(this.constructor.validatorClass.needToCheckProperty(property, value)) {
+      if (this.constructor.validatorClass.needToCheckProperty(property, value)) {
         let p = this.getByUniqueProperty(property, value)
           .then ( foundVo => {
-            if(foundVo==null) {
+            if (foundVo == null) {
               return null;
             }
-            if(!vo.id) {
+            if (!vo.id) {
               return property;
             }
-            if(String(vo.id)===String(foundVo.id)) {
+            if (String(vo.id)===String(foundVo.id)) {
               return null;
             }
             return property;
@@ -341,15 +343,15 @@ export default class Manager {
       }
     });
 
-    if(promises.length === 0) {
+    if (promises.length === 0) {
       return Promise.resolve({});
     }
 
     return Promise.all(promises)
       .then( propertiesWithError => {
-        propertiesWithError.forEach( property => {
-          if(property) {
-            result[property] = 'unique';
+        propertiesWithError.forEach( hasUniqueError => {
+          if (hasUniqueError) {
+            result[property] = new ValidationPropertyError(property, 'unique');
           }
         });
         return result;
@@ -381,7 +383,7 @@ export default class Manager {
 
     let methods = childMethods;
     OwnMethods.forEach( method => {
-      if(methods.indexOf(method) < 0) {
+      if (methods.indexOf(method) < 0) {
         methods.push(method);
       }
     });
@@ -407,7 +409,7 @@ Manager.init = function(ManagerChild, VoClass, ValidatorClass) {
   });
 
   VoClass.getPropertiesNames().forEach( property => {
-    if(ValidatorClass.isPropertyUnique(property)) {
+    if (ValidatorClass.isPropertyUnique(property)) {
       let cleanProperty = property.replace(/([^a-z0-9])/ig, '');
       let methodName = 'getOneBy' + cleanProperty.charAt(0).toUpperCase() + cleanProperty.substr(1).toLowerCase();
       Object.defineProperty(ManagerChild.prototype, methodName, {

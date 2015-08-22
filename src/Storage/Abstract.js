@@ -1,8 +1,6 @@
-import { StorageError } from './../Errors';
-
 /**
  * Abstract storage for Vo.
- * Any method here must be implemented. If not, will throw a StorageError
+ * Any method here must be implemented. If not, will throw an Error
  */
 export default class AbstractStorage {
   /**
@@ -31,7 +29,7 @@ export default class AbstractStorage {
    * @abstract
    */
   get(criteria, options) {
-    throw new StorageError('Method not set up');
+    throw new Error('AbstractStorage: Method not set up');
   }
 
   /**
@@ -43,7 +41,7 @@ export default class AbstractStorage {
    * @abstract
    */
   insert(voData) {
-    throw new StorageError('Method not set up');
+    throw new Error('AbstractStorage: Method not set up');
   }
 
   /**
@@ -57,7 +55,7 @@ export default class AbstractStorage {
    * @abstract
    */
   update(criteria={}, newValues={}, options={}) {
-    throw new StorageError('Method not set up');
+    throw new Error('AbstractStorage: Method not set up');
   }
 
   /**
@@ -69,6 +67,6 @@ export default class AbstractStorage {
    * @abstract
    */
   delete(criteria) {
-    throw new StorageError('Method not set up');
+    throw new Error('AbstractStorage: Method not set up');
   }
 }
