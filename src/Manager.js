@@ -110,7 +110,7 @@ export default class Manager {
             });
         })
         .catch(err => {
-          reject( new Error(err.message) );
+          return reject( err );
         });
     });
   }
@@ -132,10 +132,10 @@ export default class Manager {
           }
 
           return this.storage.update(criteria, vo.data)
-            .catch(err => {
+            .catch( err => {
               throw new Error('Manager.updateOne() error: ' + err.message);
             })
-            .then( (affetcted) => {
+            .then( affetcted => {
               return this.get(criteria)
                 .then(items => {
                   return resolve(items[0]);
@@ -348,9 +348,9 @@ export default class Manager {
     }
 
     return Promise.all(promises)
-      .then( propertiesWithError => {
-        propertiesWithError.forEach( hasUniqueError => {
-          if (hasUniqueError) {
+      .then( uniquePromiseResults => {
+        uniquePromiseResults.forEach( property => {
+          if(property) {
             result[property] = new ValidationPropertyError(property, 'unique');
           }
         });

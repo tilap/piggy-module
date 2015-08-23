@@ -11,6 +11,19 @@ export default class ValidationPropertyError {
    * @param {String} message - the error message for the user
    */
   constructor (property, type, message = '') {
+    type = type.toUpperCase();
+    if(!ValidationPropertyError.typeExists(type)) {
+      throw new Error('ValidationError: unknown type ' + type);
+    }
+
+    Object.defineProperty(this, 'type', {
+      value: type,
+      enumerable: true,
+      writable: false,
+      configurable: false,
+    });
+
+    message = message || ValidationPropertyError.getDefaultMessage(type);
     Object.defineProperty(this, 'message', {
       value: message,
       enumerable: true,
@@ -24,17 +37,10 @@ export default class ValidationPropertyError {
       writable: false,
       configurable: false,
     });
+  }
 
-    type = type.toUpperCase();
-    if(!ValidationPropertyError.typeExists(type)) {
-      throw new Error('ValidationError: unknown type ' + type);
-    }
-    Object.defineProperty(this, 'type', {
-      value: type,
-      enumerable: true,
-      writable: false,
-      configurable: false,
-    });
+  static getDefaultMessage(type) {
+    return ValidationPropertyError.TYPES[type] || '';
   }
 
   /**
@@ -53,10 +59,10 @@ Object.defineProperty(ValidationPropertyError, 'TYPES', {
   writable: false,
   configurable: false,
   value: {
-    'REQUIRED': 'REQUIRED',
-    'UNIQUE': 'UNIQUE',
-    'FORMAT': 'FORMAT',
-    'BUSINESS': 'BUSINESS',
+    'REQUIRED': 'validation.error.required',
+    'UNIQUE': 'validation.error.unique',
+    'FORMAT': 'validation.error.format',
+    'BUSINESS': 'validation.error.business',
   }
 });
 
