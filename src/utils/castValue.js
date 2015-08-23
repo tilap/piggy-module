@@ -15,7 +15,7 @@ let castValue = module.exports = function(value, type) {
 
   switch(type.constructor) {
     case Array:
-      if (value.constructor !== Array) {
+      if (value.constructor !== type.constructor) {
         throw new Error('Invalid array');
       }
       let arrayType = type[0];
@@ -25,7 +25,7 @@ let castValue = module.exports = function(value, type) {
       return value;
 
     case Object:
-      if (value.constructor !== Object) {
+      if (value.constructor !== type.constructor) {
           throw new Error('Invalid object');
       }
       Object.keys(type).forEach((key) => {
@@ -39,6 +39,7 @@ let castValue = module.exports = function(value, type) {
           return value.constructor === Date ? value : sanitizer.toDate(value);
         case 'String':
           return value.constructor === String ? value : String(value);
+          // return value.constructor === String ? value : String(value);
         case 'Number':
           let v = value.constructor === Number ? value : Number(value);
           if(Number.isNaN( v )) {
@@ -46,10 +47,7 @@ let castValue = module.exports = function(value, type) {
           }
           return v;
         case 'Object':
-          // Sorry for that fucking workaround.
-          // Cannot forec cast coz require ObjectID AND don't want to put hard deendency here. Gonna find another way.
-          // Maybe the validator depends on the storage?
-          if(value.constructor === Object || value.constructor.name === 'ObjectID') {
+          if(value.constructor === Object) {
             return value;
           }
           break;
@@ -58,11 +56,15 @@ let castValue = module.exports = function(value, type) {
         default:
           return (type.name===value.constructor.name) ? value : value.constructor.name(value);
       }
-  }
+    default:
+      // Special ugly type for mongoId. That's a fucking type to manage...
+      if('ID'===type) {
+        return value;
+      }
 
-  if (value.constructor && value.constructor.name && value.constructor.name !== type) {
-    throw new Error('Invalid object ' + type.constructor.name + ', ' + type);
+      if (value.constructor && value.constructor.name && value.constructor.name !== type) {
+        throw new Error('Invalid object ' + type.constructor.name + ', ' + type);
+      }
+      return value;
   }
-
-  return value;
 };
