@@ -56,6 +56,7 @@ let castValue = module.exports = function(value, type) {
         default:
           return (type.name===value.constructor.name) ? value : value.constructor.name(value);
       }
+      break;
     default:
       // Special ugly type for mongoId. That's a fucking type to manage...
       if('ID'===type) {

@@ -6,17 +6,12 @@ export default class AbstractStorage {
   /**
    * @param {?Object|Array|String} collection - the sotorage collection
    */
-  constructor(collection=null) {
+  constructor(collection = null) {
     /**
      * @type {?Object|Array|String}
      * @private
      */
     this._collection = collection;
-  }
-
-  /** @type {?Object|Array|String} */
-  get collection() {
-    return this._collection;
   }
 
   /**
@@ -26,21 +21,21 @@ export default class AbstractStorage {
    * @param {Object} options - mongodb options style
    * @return {Promise<Object[], Error>}
    * @access public
-   * @abstract
+   * @override
    */
-  get(criteria, options) {
+  get(criteria = {}, options= {}) {
     throw new Error('AbstractStorage: Method not set up');
   }
 
   /**
-   * Insert many data Object in storage
+   * Insert one Object in database
    *
-   * @param [Object[]] dataArray - a list of data Object
-   * @return {Promise<Object[], Error>} - inserted data Object list
+   * @param {Object[]} dataArray - a list of data Object
+   * @return {Promise<Object, Error>} - inserted data Object
    * @access public
-   * @abstract
+   * @override
    */
-  insert(voData) {
+  insertOne(data={}) {
     throw new Error('AbstractStorage: Method not set up');
   }
 
@@ -49,12 +44,14 @@ export default class AbstractStorage {
    *
    * @param {Object} criteria - MongoDb criteria Object
    * @param {Object} newValues - key-value Object with new data
-   * @param {Object} options - Storage option
-   * @return {Promise<integer, Error>} - number of updated items
+   * @param {Object} options - MongoDb options
+   * @param {boolean} options.upsert - insert if not exists
+   * @param {boolean} options.multi - update multi Object enabled
+   * @return {Promise<Boolean, Error>} - true if updated, else false
    * @access public
-   * @abstract
+   * @override
    */
-  update(criteria={}, newValues={}, options={}) {
+  updateOne(criteria, newData) {
     throw new Error('AbstractStorage: Method not set up');
   }
 
@@ -64,7 +61,7 @@ export default class AbstractStorage {
    * @param {Object} criteria - MongoDb criteria Object
    * @return {Promise<integer, Error>} - number of deleted items
    * @access public
-   * @abstract
+   * @override
    */
   delete(criteria) {
     throw new Error('AbstractStorage: Method not set up');

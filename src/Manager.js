@@ -48,9 +48,11 @@ export default class Manager {
       })
       .then( items => {
         let res = [];
-        items.map( item => {
-          res.push(this.getNewVo(item));
-        });
+        if (items.constructor===Array) {
+          items.map( item => {
+            res.push(this.getNewVo(item));
+          });
+        }
         return res;
       })
       .catch( err => {
@@ -58,20 +60,6 @@ export default class Manager {
       });
   }
 
-  /**
-   * Get a paginated list of Vo
-   *
-   * @param {Object} criteria - mongodb-like criteria style
-   * @param {integer} page - the page to retrieve
-   * @param {integer} limit - number of item per page
-   * @param {string} orderby - a Vo property to order by
-   * @param {string} order - 'asc' or 'desc'
-   * @return {Promise<Vo[], Error>}
-   * @access public
-   */
-  getByPage(criteria, page=1, limit=15, orderby='id', order=1) {
-    return this.storage.getgetByPage(criteria, page, limit, orderby, order);
-  }
 
   /**
    * Save a vo in storage, update if exists, or insert
@@ -97,21 +85,15 @@ export default class Manager {
           if (validation.hasError()) {
             return reject(validation);
           }
-          const data = [vo.data];
-          this.storage.insert(data)
+
+          const data = vo.data;
+          this.storage.insertOne(data)
             .catch(err => {
               throw new Error('Manager.insertOne() error: ' + err.message);
             })
-            .then(newItemsData => {
-              if (newItemsData.constructor !== Array || newItemsData.length!==1) {
-                return resolve(null);
-              }
-              resolve(this.getNewVo(newItemsData[0]));
-            });
+            .then(newItemsData => resolve(this.getNewVo(newItemsData)) );
         })
-        .catch(err => {
-          return reject( err );
-        });
+        .catch(err => reject( err ));
     });
   }
 
@@ -123,28 +105,19 @@ export default class Manager {
    */
   updateOne(vo) {
     this.assumeIsOwnVoClass(vo);
-    let criteria = {_id: vo.id};
+
     return new Promise( (resolve, reject) => {
       this.getAllVoErrors(vo)
         .then( validation => {
           if (validation.hasError()) {
             return reject(validation);
           }
-
-          return this.storage.update(criteria, vo.data)
-            .catch( err => {
-              throw new Error('Manager.updateOne() error: ' + err.message);
-            })
-            .then( affetcted => {
-              return this.get(criteria)
-                .then(items => {
-                  return resolve(items[0]);
-                });
-            });
+          let criteria = { _id: vo.id };
+          this.storage.updateOne(criteria, vo.data)
+            .catch( err => reject(new Error('Manager.updateOne() error: ' + err.message)) )
+            .then( updatedVoData => resolve(this.getNewVo(updatedVoData)) );
         })
-        .catch(err => {
-          reject( err );
-        });
+        .catch(err => reject( err ));
     });
   }
 
@@ -155,47 +128,25 @@ export default class Manager {
    * @access public
    */
   delete(vosArr) {
+    let idsToDelete=[];
     vosArr.forEach( vo => {
-      this.assumeIsOwnVoClass(vo);
+      try {
+        this.assumeIsOwnVoClass(vo);
+        if(vo.id) {
+          idsToDelete.push(vo.id);
+        }
+      }
+      catch(err) {
+        return null;
+      }
     });
+    let criteria = { _id: { $in: idsToDelete}};
     return new Promise( (resolve, reject) => {
-      let ids = [];
-      vosArr.forEach( vo => {
-        ids.push(vo.id);
-      });
-
-      let criteria = { _id: { $in: ids}};
       this.storage.delete(criteria)
-        .then(
-          deletedItemCount => {
-            resolve(deletedItemCount);
-          },
-          err => {
-            reject(err);
-          }
-        );
-    });
-  }
-
-  /**
-   * Delete a vo in storage
-   * @param {Vo} vo
-   * @return {Promise<boolean, Error>} number of deleted item
-   * @access public
-   */
-  deleteOne(vo) {
-    this.assumeIsOwnVoClass(vo);
-    return new Promise( (resolve, reject) => {
-      let criteria = { _id: vo.id };
-      this.storage.delete(criteria)
-        .then(
-          deletedItemCount => {
-            resolve(deletedItemCount===1);
-          },
-          err => {
-            reject(err);
-          }
-        );
+        .then(deletedItemCount => {
+          resolve(deletedItemCount);
+        })
+        .catch(err => reject(err));
     });
   }
 
