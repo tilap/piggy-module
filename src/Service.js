@@ -23,14 +23,37 @@ export default class Service {
   /**
    * Store a context
    *
-   * @param {string} key - the context key
-   * @param {?(number|string|Array|object)} value - the context value
+   * @param {String} key - the context key
+   * @param {any} value - the context value
    * @return {self}
    * @access public
    */
   setContext(key, value) {
     this._context[key]=value;
     return this;
+  }
+
+  /**
+   * Check if a context key exists
+   *
+   * @param {String} key - the context key
+   * @return {Boolean}
+   * @access public
+   */
+  hasContext(key) {
+    return Object.keys(this._context).indexOf(key) > -1;
+  }
+
+  /**
+   * Get a context value or a default one
+   *
+   * @param {String} key - the context key
+   * @param {any} defaultValue - the default value is no context key exists
+   * @return {Boolean}
+   * @access public
+   */
+  getContext(key, defaultValue = null) {
+    return this.hasContext(key) ? this._context[key] : defaultValue;
   }
 
   /**
@@ -143,24 +166,26 @@ export default class Service {
 
   updateOneByUniqueProperty(property, value, newData) {
     return new Promise((resolve, reject) => {
-      this.getOneByUniqueProperty(property, value).then( vo => {
-        if(null===vo) {
-          return reject ('not found');
-        }
-        vo.setData(newData);
-        return vo;
-      }).then( vo => {
-        return this._manager.updateOne(vo)
-          .then( updatedVo => resolve(updatedVo))
-          .catch(err => reject(err));
-      });
+      this.getOneByUniqueProperty(property, value)
+        .then( vo => {
+          if(null===vo) {
+            return reject ('not found');
+          }
+          vo.setData(newData);
+          return vo;
+        })
+        .then( vo => {
+          this._manager.updateOne(vo)
+            .then( updatedVo => resolve(updatedVo))
+            .catch(err => reject(err));
+        })
+        .catch(err => reject(err));
     });
   }
 
   delete(criteria={}) {
     return new Promise( (resolve, reject) => {
       this.get(criteria)
-        .catch( err => reject('Delete error: ' + err.message))
         .then( vos => {
           this._manager.delete(vos)
             .then( deletedCount => {
@@ -168,7 +193,7 @@ export default class Service {
             })
             .catch( error => reject(error) );
         })
-        .catch( err => reject('Delete error: ' + err.message) );
+        .catch(err => reject(err));
     });
   }
 

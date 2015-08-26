@@ -108,7 +108,7 @@ export default class MongoStorage extends AbstractStorage{
           return reject( new Error('Storage error: delete() ' + err.message) );
         }
         let deletedDocumentsCount = deleteResult.result.n;
-        resolve(deletedDocumentsCount);
+        resolve({ 'deletedCount' : deletedDocumentsCount});
       });
     });
   }

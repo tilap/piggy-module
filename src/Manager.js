@@ -43,9 +43,6 @@ export default class Manager {
    */
   get(criteria={}, options={}) {
     return this.storage.get(criteria, options)
-      .catch( err => {
-        throw new Error('Manager.get() error: ' + err.message);
-      })
       .then( items => {
         let res = [];
         if (items.constructor===Array) {
@@ -54,9 +51,6 @@ export default class Manager {
           });
         }
         return res;
-      })
-      .catch( err => {
-        throw new Error('Manager.get() error#2: ' + err.message);
       });
   }
 
@@ -143,8 +137,8 @@ export default class Manager {
     let criteria = { _id: { $in: idsToDelete}};
     return new Promise( (resolve, reject) => {
       this.storage.delete(criteria)
-        .then(deletedItemCount => {
-          resolve(deletedItemCount);
+        .then(result => {
+          resolve(result.deletedCount);
         })
         .catch(err => reject(err));
     });

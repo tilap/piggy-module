@@ -1,4 +1,5 @@
-import AbstractStorage from '/Abstract';
+import AbstractStorage from 'piggy-module/lib/Storage/Abstract';
+import {UnreachableStorage} from 'piggy-module/lib/Storage/Errors';
 
 export default class ApiStorage extends AbstractStorage {
 
@@ -105,8 +106,13 @@ export default class ApiStorage extends AbstractStorage {
 
     return new Promise( (resolve, reject) => {
       fetch(url, options)
+        .catch(error => {
+          if(error.constructor.name==='TypeError') {
+            reject( new UnreachableStorage());
+          }
+          reject(error);
+        })
         .then(function(response) {
-          // if (response.status > 200 || response.status < 300) {
           if (response.ok) {
             return response;
           }
@@ -123,6 +129,8 @@ export default class ApiStorage extends AbstractStorage {
     });
   }
 
+
+  // @todo: do a real api response parser as of ApiBag, ApiBagRessource and a ApiPiggyModuleBag
   _isJsonPiggyResult(json) {
     let isPiggyModuleResult = true;
     if (!json.data) {

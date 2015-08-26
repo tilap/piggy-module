@@ -95,8 +95,13 @@ export default class Vo {
    * @access public
    */
   setData(data={}) {
-    Object.keys(data).forEach( property => {
-      this.set(property, data[property]);
+    this.constructor.getPropertiesNames().forEach( property => {
+      if(data[property]) {
+        this.set(property, data[property]);
+      }
+      else if(this.constructor.getPropertyDefault(property)) {
+        this.set(property, this.constructor.getPropertyDefault(property));
+      }
     });
     return this;
   }
