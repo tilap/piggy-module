@@ -3,8 +3,8 @@ import {UnreachableStorage} from 'piggy-module/lib/Storage/Errors';
 
 export default class ApiStorage extends AbstractStorage {
 
-  constructor(collection = '') {
-    super(collection);
+  constructor(connector, collection) {
+    super(connector, collection);
   }
 
   /**
@@ -56,7 +56,7 @@ export default class ApiStorage extends AbstractStorage {
    * @access private
    */
   _getFetcherUrl(path = '', params = {}) {
-    let url = this._collection + path;
+    let url = this._connector + this._collection + path;
     if (params && Object.keys(params).length > 0) {
       let args = [];
       Object.keys(params).forEach( key => {
@@ -108,9 +108,9 @@ export default class ApiStorage extends AbstractStorage {
       fetch(url, options)
         .catch(error => {
           if(error.constructor.name==='TypeError') {
-            reject( new UnreachableStorage());
+            return reject( new UnreachableStorage());
           }
-          reject(error);
+          return reject(error);
         })
         .then(function(response) {
           if (response.ok) {
@@ -122,29 +122,44 @@ export default class ApiStorage extends AbstractStorage {
         }).then( response => {
           return response.json();
         }).then( json => {
-          resolve( this._isJsonPiggyResult(json) ? this._extractPiggyData(json, defaultValue) : json);
+          // Piggy instalce
+          if(this._isJsonPiggyResult(json)) {
+            return this._extractPiggyData(json, defaultValue);
+          }
+          // Error
+          if(this._isJsonPiggyError(json)) {
+            return json;
+          }
+          // Raw
+          if(json.hasOwnProperty('data')) {
+            return json.data;
+          }
+          return json;
+        }).then(res => {
+          resolve(res);
         }).catch( err => {
           reject(err);
         });
     });
   }
 
-
+  _isJsonPiggyError(json) {
+    return json.hasOwnProperty('errors');
+  }
   // @todo: do a real api response parser as of ApiBag, ApiBagRessource and a ApiPiggyModuleBag
   _isJsonPiggyResult(json) {
-    let isPiggyModuleResult = true;
     if (!json.data) {
+      return false;
+    }
+    let isPiggyModuleResult = true;
+    if (json.data.constructor === Array) {
+      json.data.forEach( item => {
+        if (!item.attributes) {
+          isPiggyModuleResult = false;
+        }
+      });
+    } else if (!json.data.attributes) {
       isPiggyModuleResult = false;
-    } else {
-      if (json.data.constructor === Array) {
-        json.data.forEach( item => {
-          if (!item.attributes) {
-            isPiggyModuleResult = false;
-          }
-        });
-      } else if (!json.data.attributes) {
-        isPiggyModuleResult = false;
-      }
     }
     return isPiggyModuleResult;
   }

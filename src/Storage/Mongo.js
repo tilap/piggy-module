@@ -9,8 +9,19 @@ export default class MongoStorage extends AbstractStorage{
   /**
    * @param {Object} collection - A mongodb collection
    */
-  constructor(collection) {
-    super(collection);
+  constructor(connector, collection) {
+    super(connector, collection);
+  }
+
+  getCollection() {
+    return new Promise( (resolve, reject) => {
+      this._connector.getCollection(this._collection)
+        .then( collection => resolve( collection ) )
+        .catch( error => {
+          console.error('MongoStorage getCollection error', error);
+          reject(error)
+        });
+    });
   }
 
   /**
@@ -25,13 +36,20 @@ export default class MongoStorage extends AbstractStorage{
   get(criteria = {}, options= {}) {
     criteria = this._prepareCriteria(criteria);
     return new Promise( (resolve, reject) => {
-      this._collection
-        .find(criteria, options)
-        .toArray( (err, items) => {
-          if(err) {
-            return reject( new Error('Storage error in get()'));
-          }
-          resolve(items);
+      this.getCollection()
+        .then( collection => {
+          collection
+            .find(criteria, options)
+            .toArray( (err, items) => {
+              if(err) {
+                return reject( new Error('Storage error in get()'));
+              }
+              resolve(items);
+            });
+        })
+        .catch( error => {
+          console.error('MongoStorage error', error);
+          reject(error)
         });
     });
   }
@@ -46,16 +64,20 @@ export default class MongoStorage extends AbstractStorage{
    */
   insertOne(data={}) {
     return new Promise( (resolve, reject) => {
-      this._collection.insert(data, (err, insertResult) => {
-        if(err) {
-          return reject( new Error ('Storage error: insert() ' + err.message) );
-        }
-        if(!insertResult.ops || insertResult.ops.length!==1) {
-          return reject( new Error ('Storage error: non unique result') );
-        }
-        let insertedDatas = insertResult.ops[0];
-        resolve(insertedDatas);
-      });
+      this.getCollection()
+        .then( collection => {
+          collection.insert(data, (err, insertResult) => {
+            if(err) {
+              return reject( new Error ('Storage error: insert() ' + err.message) );
+            }
+            if(!insertResult.ops || insertResult.ops.length!==1) {
+              return reject( new Error ('Storage error: non unique result') );
+            }
+            let insertedDatas = insertResult.ops[0];
+            resolve(insertedDatas);
+          });
+        })
+        .catch( error => reject(error));
     });
   }
 
@@ -76,19 +98,23 @@ export default class MongoStorage extends AbstractStorage{
     criteria = this._prepareCriteria(criteria);
     newData = this._stripIdCriteria(newData);
     return new Promise( (resolve, reject) => {
-      this._collection.update(criteria, { $set: newData}, options, (err, updateResult) => {
-        if (err) {
-          return reject(new Error('Storage error: update() ' + err.message));
-        }
-        this.get(criteria).then( vos => {
-          if(!vos[0]) {
-            return reject('Error post update #1');
-          }
-          let res = vos[0];
-          return resolve(res);
+      this.getCollection()
+        .then( collection => {
+            collection.update(criteria, { $set: newData}, options, (err, updateResult) => {
+            if (err) {
+              return reject(new Error('Storage error: update() ' + err.message));
+            }
+            this.get(criteria).then( vos => {
+              if(!vos[0]) {
+                return reject('Error post update #1');
+              }
+              let res = vos[0];
+              return resolve(res);
+            })
+            .catch(err => reject('Error post update #2'));
+          });
         })
-        .catch(err => reject('Error post update #2'));
-      });
+        .catch( error => reject(error));
     });
   }
 
@@ -103,13 +129,17 @@ export default class MongoStorage extends AbstractStorage{
   delete(criteria) {
     criteria = this._prepareCriteria(criteria);
     return new Promise( (resolve, reject) => {
-      this._collection.deleteMany(criteria, (err, deleteResult) => {
-        if(err) {
-          return reject( new Error('Storage error: delete() ' + err.message) );
-        }
-        let deletedDocumentsCount = deleteResult.result.n;
-        resolve({ 'deletedCount' : deletedDocumentsCount});
-      });
+      this.getCollection()
+        .then( collection => {
+          collection.deleteMany(criteria, (err, deleteResult) => {
+            if(err) {
+              return reject( new Error('Storage error: delete() ' + err.message) );
+            }
+            let deletedDocumentsCount = deleteResult.result.n;
+            resolve({ 'deletedCount' : deletedDocumentsCount});
+          });
+        })
+        .catch( error => reject(error));
     });
   }
 

@@ -14,7 +14,7 @@ function gulpBuild(source) {
       compact: true,
       comments: false,
       blacklist: ['regenerator'],
-      optional: ['asyncToGenerator']
+      optional: ['asyncToGenerator', 'runtime']
     }))
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(config.dist));

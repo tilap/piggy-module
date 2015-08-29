@@ -4,11 +4,17 @@
  */
 export default class AbstractStorage {
   /**
-   * @param {?Object|Array|String} collection - the sotorage collection
+   * @param {any} connector - storage connector
+   * @param {String} collection - the collection to query on
    */
-  constructor(collection = null) {
+  constructor(connector, collection) {
     /**
-     * @type {?Object|Array|String}
+     * @type {any}
+     * @private
+     */
+    this._connector = connector;
+    /**
+     * @type {String}
      * @private
      */
     this._collection = collection;

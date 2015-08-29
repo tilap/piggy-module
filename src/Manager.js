@@ -42,7 +42,8 @@ export default class Manager {
    * @access public
    */
   get(criteria={}, options={}) {
-    return this.storage.get(criteria, options)
+    return this.storage
+      .get(criteria, options)
       .then( items => {
         let res = [];
         if (items.constructor===Array) {
@@ -52,6 +53,7 @@ export default class Manager {
         }
         return res;
       });
+
   }
 
 
@@ -82,9 +84,7 @@ export default class Manager {
 
           const data = vo.data;
           this.storage.insertOne(data)
-            .catch(err => {
-              throw new Error('Manager.insertOne() error: ' + err.message);
-            })
+            .catch( err => reject(new Error('Manager.insertOne() error: ' + err.message)) )
             .then(newItemsData => resolve(this.getNewVo(newItemsData)) );
         })
         .catch(err => reject( err ));
