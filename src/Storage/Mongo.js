@@ -19,7 +19,7 @@ export default class MongoStorage extends AbstractStorage{
         .then( collection => resolve( collection ) )
         .catch( error => {
           console.error('MongoStorage getCollection error', error);
-          reject(error)
+          reject(error);
         });
     });
   }
@@ -49,7 +49,7 @@ export default class MongoStorage extends AbstractStorage{
         })
         .catch( error => {
           console.error('MongoStorage error', error);
-          reject(error)
+          reject(error);
         });
     });
   }

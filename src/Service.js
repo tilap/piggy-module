@@ -17,7 +17,7 @@ export default class Service {
      * @type {object}
      * @private
      */
-    this._context = {};
+    this._context = null;
   }
 
   /**
@@ -28,20 +28,9 @@ export default class Service {
    * @return {self}
    * @access public
    */
-  setContext(key, value) {
-    this._context[key]=value;
+  setContext(context) {
+    this._context=context;
     return this;
-  }
-
-  /**
-   * Check if a context key exists
-   *
-   * @param {String} key - the context key
-   * @return {Boolean}
-   * @access public
-   */
-  hasContext(key) {
-    return Object.keys(this._context).indexOf(key) > -1;
   }
 
   /**
@@ -52,22 +41,9 @@ export default class Service {
    * @return {Boolean}
    * @access public
    */
-  getContext(key, defaultValue = null) {
-    return this.hasContext(key) ? this._context[key] : defaultValue;
+  getContext() {
+    return this._context;
   }
-
-  /**
-   * Store and override all context
-   *
-   * @param {object} context - the context key
-   * @return {self}
-   * @access public
-   */
-  setFullContext(context) {
-    this._context = context;
-    return this;
-  }
-
 
   /**
    * Get a list of Vo
